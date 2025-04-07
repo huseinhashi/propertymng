@@ -1,0 +1,157 @@
+-- Admins Table
+CREATE TABLE admins (
+  admin_id INT AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(100) NOT NULL,
+  email VARCHAR(100) UNIQUE NOT NULL,
+  password VARCHAR(255) NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+-- Customers Table
+CREATE TABLE customers (
+  customer_id INT AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(100) NOT NULL,
+  phone VARCHAR(20) NOT NULL,
+  address VARCHAR(100),
+  password_hash VARCHAR(255) NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+-- Service Types Table
+CREATE TABLE service_types (
+  service_type_id INT AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(100) NOT NULL,
+  commission_percent DECIMAL(5,2) NOT NULL CHECK (commission_percent BETWEEN 0 AND 100),
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+-- Experts Table
+CREATE TABLE experts (
+  expert_id INT AUTO_INCREMENT PRIMARY KEY,
+  full_name VARCHAR(100) NOT NULL,
+  email VARCHAR(100) UNIQUE NOT NULL,
+  bio TEXT,
+  password_hash VARCHAR(255) NOT NULL,
+  service_type_id INT NOT NULL,
+  address VARCHAR(100),
+  is_verified BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (service_type_id) REFERENCES service_types(service_type_id) ON DELETE CASCADE
+);
+
+-- Repair Requests Table
+CREATE TABLE repair_requests (
+  request_id INT AUTO_INCREMENT PRIMARY KEY,
+  customer_id INT NOT NULL,
+  description TEXT NOT NULL,
+  location TEXT NOT NULL,
+  service_type_id INT NOT NULL,
+  status ENUM('pending', 'bidding', 'closed','rejected') DEFAULT 'pending',
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (customer_id) REFERENCES customers(customer_id) ON DELETE CASCADE,
+  FOREIGN KEY (service_type_id) REFERENCES service_types(service_type_id) ON DELETE CASCADE
+);
+
+-- Service Images Table
+CREATE TABLE service_images (
+  image_id INT AUTO_INCREMENT PRIMARY KEY,
+  request_id INT NOT NULL,
+  url TEXT NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (request_id) REFERENCES repair_requests(request_id) ON DELETE CASCADE
+);
+
+-- Bids Table
+CREATE TABLE bids (
+  bid_id INT AUTO_INCREMENT PRIMARY KEY,
+  request_id INT NOT NULL,
+  expert_id INT NOT NULL,
+  cost DECIMAL(10,2) NOT NULL,
+  deadline TIMESTAMP NOT NULL,
+  is_accepted BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (request_id) REFERENCES repair_requests(request_id) ON DELETE CASCADE,
+  FOREIGN KEY (expert_id) REFERENCES experts(expert_id) ON DELETE CASCADE
+);
+
+-- Service Orders Table
+CREATE TABLE service_orders (
+  service_order_id INT AUTO_INCREMENT PRIMARY KEY,
+  request_id INT NOT NULL,
+  customer_id INT NOT NULL,
+  expert_id INT NOT NULL,
+  service_type_id INT NOT NULL,
+  accepted_bid_id INT NOT NULL,
+  base_price DECIMAL(10,2) NOT NULL,
+  extra_price DECIMAL(10,2) DEFAULT 0.00,
+  total_price DECIMAL(10,2) GENERATED ALWAYS AS (base_price + extra_price) STORED,
+  status ENUM('in_progress', 'completed', 'delivered', 'refunded') DEFAULT 'in_progress',
+  payment_status ENUM('unpaid', 'partially_paid', 'fully_paid', 'in_hand', 'refunded') DEFAULT 'unpaid',
+  deadline TIMESTAMP,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (request_id) REFERENCES repair_requests(request_id) ON DELETE CASCADE,
+  FOREIGN KEY (customer_id) REFERENCES customers(customer_id) ON DELETE CASCADE,
+  FOREIGN KEY (expert_id) REFERENCES experts(expert_id) ON DELETE CASCADE,
+  FOREIGN KEY (service_type_id) REFERENCES service_types(service_type_id) ON DELETE CASCADE,
+  FOREIGN KEY (accepted_bid_id) REFERENCES bids(bid_id) ON DELETE CASCADE
+);
+
+-- Payments Table
+CREATE TABLE payments (
+  payment_id INT AUTO_INCREMENT PRIMARY KEY,
+  service_order_id INT NOT NULL,
+  customer_id INT NOT NULL,
+  expert_id INT NOT NULL,
+  type ENUM('initial', 'extra') NOT NULL,
+  reason TEXT DEFAULT 'Initial payment',
+  amount DECIMAL(10,2) NOT NULL,
+  status ENUM('pending', 'paid') DEFAULT 'pending',
+  paid_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (service_order_id) REFERENCES service_orders(service_order_id) ON DELETE CASCADE,
+  FOREIGN KEY (customer_id) REFERENCES customers(customer_id) ON DELETE CASCADE,
+  FOREIGN KEY (expert_id) REFERENCES experts(expert_id) ON DELETE CASCADE
+);
+
+-- Payouts Table
+CREATE TABLE payouts (
+  payout_id INT AUTO_INCREMENT PRIMARY KEY,
+  service_order_id INT NOT NULL,
+  expert_id INT NOT NULL,
+  total_payment DECIMAL(10,2) NOT NULL,
+  commission DECIMAL(5,2) NOT NULL,
+  net_payout DECIMAL(10,2) GENERATED ALWAYS AS (total_payment * (1 - commission / 100)) STORED,
+  payout_status ENUM('pending', 'released') DEFAULT 'pending',
+  released_at TIMESTAMP,
+  FOREIGN KEY (service_order_id) REFERENCES service_orders(service_order_id) ON DELETE CASCADE,
+  FOREIGN KEY (expert_id) REFERENCES experts(expert_id) ON DELETE CASCADE
+);
+
+-- Refund Requests Table
+CREATE TABLE refund_requests (
+  refund_id INT AUTO_INCREMENT PRIMARY KEY,
+  service_order_id INT NOT NULL,
+  customer_id INT NOT NULL,
+  reason TEXT NOT NULL,
+  status ENUM('requested', 'approved', 'rejected') DEFAULT 'requested',
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (service_order_id) REFERENCES service_orders(service_order_id) ON DELETE CASCADE,
+  FOREIGN KEY (customer_id) REFERENCES customers(customer_id) ON DELETE CASCADE
+);
+
+-- Ratings Table
+CREATE TABLE ratings (
+  rating_id INT AUTO_INCREMENT PRIMARY KEY,
+  service_order_id INT NOT NULL,
+  expert_id INT NOT NULL,
+  score INT CHECK (score BETWEEN 1 AND 10),
+  feedback TEXT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (service_order_id) REFERENCES service_orders(service_order_id) ON DELETE CASCADE,
+  FOREIGN KEY (expert_id) REFERENCES experts(expert_id) ON DELETE CASCADE
+);
