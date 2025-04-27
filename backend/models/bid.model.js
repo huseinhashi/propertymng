@@ -7,6 +7,14 @@ const Bid = sequelize.define("bid", {
     primaryKey: true,
     autoIncrement: true,
   },
+  expert_id: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+  },
+  request_id: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+  },
   cost: {
     type: DataTypes.DECIMAL(10, 2),
     allowNull: false,
@@ -14,6 +22,10 @@ const Bid = sequelize.define("bid", {
   deadline: {
     type: DataTypes.DATE,
     allowNull: false,
+  },
+  description: {
+    type: DataTypes.TEXT,
+    defaultValue: "",
   },
   is_accepted: {
     type: DataTypes.BOOLEAN,

@@ -7,6 +7,10 @@ const Rating = sequelize.define("rating", {
     primaryKey: true,
     autoIncrement: true,
   },
+  service_order_id: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+  },
   score: {
     type: DataTypes.INTEGER,
     allowNull: false,

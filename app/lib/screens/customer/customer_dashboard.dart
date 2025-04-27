@@ -7,6 +7,8 @@ import 'tabs/home_tab.dart';
 import 'tabs/history_tab.dart';
 import 'tabs/payments_tab.dart';
 import 'tabs/profile_tab.dart';
+import 'orders_screen.dart';
+import 'repair_request_screen.dart';
 
 class CustomerDashboardScreen extends StatefulWidget {
   const CustomerDashboardScreen({Key? key}) : super(key: key);
@@ -114,6 +116,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> {
             children: const [
               HomeTab(),
               HistoryTab(),
+              OrdersScreen(),
               PaymentsTab(),
               ProfileTab(),
             ],
@@ -124,6 +127,17 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> {
                 backgroundColor: accentColor,
                 onPressed: () {
                   // Navigate to request creation screen
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const RepairRequestScreen(),
+                    ),
+                  ).then((result) {
+                    // Refresh the screen if request was successful
+                    if (result == true) {
+                      setState(() {});
+                    }
+                  });
                 },
                 icon: const Icon(Icons.add),
                 label: Text('New Request', style: GoogleFonts.poppins()),
@@ -163,6 +177,10 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> {
               BottomNavigationBarItem(
                 icon: Icon(Icons.history),
                 label: "History",
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.assignment),
+                label: "Orders",
               ),
               BottomNavigationBarItem(
                 icon: Icon(Icons.payment),

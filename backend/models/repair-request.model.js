@@ -7,6 +7,10 @@ const RepairRequest = sequelize.define("repair_request", {
     primaryKey: true,
     autoIncrement: true,
   },
+  customer_id: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+  },
   description: {
     type: DataTypes.TEXT,
     allowNull: false,
@@ -14,6 +18,10 @@ const RepairRequest = sequelize.define("repair_request", {
   location: {
     type: DataTypes.STRING,
     allowNull: false,
+  },
+  service_type_id: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
   },
   status: {
     type: DataTypes.ENUM("pending", "bidding", "closed", "rejected"),

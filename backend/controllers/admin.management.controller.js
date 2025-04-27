@@ -97,6 +97,14 @@ export const deleteAdmin = async (req, res, next) => {
       });
     }
 
+    const adminCount = await Admin.count();
+    if (adminCount === 1) {
+      return res.status(400).json({
+        success: false,
+        message: "Cannot delete the last admin",
+      });
+    }
+
     await admin.destroy();
 
     res.status(200).json({

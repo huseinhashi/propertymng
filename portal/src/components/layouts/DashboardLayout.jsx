@@ -36,50 +36,46 @@ export const DashboardLayout = ({ children }) => {
       href: "/admin",
     },
     {
-      id: "user_management",
-      title: "User Management",
-      icon: Users,
-      subItems: [
-        {
-          id: "customers",
-          title: "Customers", 
-          href: "/admin/customer", 
-          icon: User 
-        },
-        {
-          id: "experts",
-          title: "Experts", 
-          href: "/admin/experts", 
-          icon: Briefcase 
-        },
-        {
-          id: "admins",
-          title: "Admins", 
-          href: "/admin/admins", 
-          icon: UserCog 
-        },
-      ],
+      id: "admins",
+      title: "Admins",
+      href: "/admin/admins",
+      icon: UserCog,
+    },
+    {
+      id: "experts",
+      title: "Technicians",
+      icon: Briefcase,
+      href: "/admin/experts",
+    },
+    {
+      id: "customers",
+      title: "Customers",
+      icon: User,
+      href: "/admin/customers",
     },
     {
       id: "service_types",
       title: "Service Types",
       icon: ClipboardList,
       href: "/admin/service-types",
-      // comingSoon: true,
     },
     {
       id: "requests",
       title: "Requests",
       icon: ClipboardList,
-      href: "/admin/requests",
-      comingSoon: true,
+      href: "/admin/repair-requests",
+    },
+    {
+      id: "service_orders",
+      title: "Service Orders",
+      icon: ClipboardList,
+      href: "/admin/service-orders",
     },
     {
       id: "payments",
       title: "Payments",
       icon: CreditCard,
       href: "/admin/payments",
-      comingSoon: true,
     },
     {
       id: "payouts",

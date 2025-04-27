@@ -3,6 +3,8 @@ import 'package:app/screens/customer/request_details_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:app/utils/AppColor.dart';
+import 'package:app/services/repair_service.dart';
+import 'package:intl/intl.dart';
 
 class HistoryTab extends StatefulWidget {
   const HistoryTab({Key? key}) : super(key: key);
@@ -12,292 +14,415 @@ class HistoryTab extends StatefulWidget {
 }
 
 class _HistoryTabState extends State<HistoryTab> {
-  String selectedStatus = "All";
+  final RepairService _repairService = RepairService();
+  bool _isLoading = false;
+  String? _error;
+  List<dynamic> _repairRequests = [];
 
-  final List<Map<String, dynamic>> dummyRequests = [
-    {
-      "description": "Armaajo baa iga halaysan", //translate to somali language
-      "location": "Tarbuunka",
-      "serviceType": "Furniture",
-      "status": "pending",
-      "date": "Mar 30, 2025",
-      "icon": Icons.water_drop_rounded,
-      "color": Colors.blue,
-    },
-    {
-      "description":
-          "Xerkaha korontada iga halaysan waana ku wareeray inaa xaliyo",
-      "location": "suuqbacaad",
-      "serviceType": "Electrical",
-      "status": "bidding",
-      "date": "Mar 25, 2025",
-      "icon": Icons.electrical_services_rounded,
-      "color": Colors.amber,
-    },
-    {
-      "description": "qolka jiifka dayactir u baahan",
-      "location": "xamarweyne",
-      "serviceType": "Furniture",
-      "status": "completed",
-      "date": "Mar 15, 2025",
-      "icon": Icons.format_paint_rounded,
-      "color": Colors.purple,
-    },
-    {
-      "description":
-          "Tubooyinka musqusha welibo mida qabayska dayactir u baahan",
-      "location": "suuqa xoolaha",
-      "serviceType": "Tiling",
-      "status": "completed",
-      "date": "Mar 10, 2025",
-      "icon": Icons.grid_on_rounded,
-      "color": Colors.teal,
-    },
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _fetchRepairRequests();
+  }
+
+  Future<void> _fetchRepairRequests() async {
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+
+    try {
+      final response = await _repairService.getCustomerRepairRequests();
+
+      setState(() {
+        _isLoading = false;
+        if (response['success'] == true) {
+          _repairRequests = response['data'] ?? [];
+        } else {
+          _error = response['message'] ?? 'Failed to load repair requests';
+        }
+      });
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+        _error = 'Error: $e';
+      });
+    }
+  }
+
+  String _getStatusColor(String status) {
+    switch (status.toLowerCase()) {
+      case 'pending':
+        return '#FFA500'; // Orange
+      case 'bidding':
+        return '#3498DB'; // Blue
+      case 'closed':
+        return '#27AE60'; // Green
+      case 'rejected':
+        return '#E74C3C'; // Red
+      default:
+        return '#95A5A6'; // Gray
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    List<Map<String, dynamic>> filteredRequests = selectedStatus == "All"
-        ? dummyRequests
-        : dummyRequests
-            .where((request) =>
-                request["status"].toString().toLowerCase() ==
-                selectedStatus.toLowerCase())
-            .toList();
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(20, 24, 20, 16),
-          child: Text(
-            "Service History",
-            style: GoogleFonts.poppins(
-              fontSize: 20,
-              fontWeight: FontWeight.w600,
-              color: textPrimaryColor,
-            ),
-          ),
-        ),
-
-        // Filter chips
-        Container(
-          height: 50,
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: ListView(
-            scrollDirection: Axis.horizontal,
-            children: [
-              _buildFilterChip("All"),
-              _buildFilterChip("Pending"),
-              _buildFilterChip("Bidding"),
-              _buildFilterChip("In Progress"),
-              _buildFilterChip("Completed"),
-            ],
-          ),
-        ),
-
-        const SizedBox(height: 16),
-
-        // History list
-        Expanded(
-          child: ListView.builder(
-            padding: const EdgeInsets.all(20),
-            itemCount: filteredRequests.length,
-            itemBuilder: (context, index) {
-              final request = filteredRequests[index];
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 16),
-                child: _buildRequestCard(context, request),
-              );
-            },
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildFilterChip(String label) {
-    final isSelected = selectedStatus.toLowerCase() == label.toLowerCase();
-
-    return Padding(
-      padding: const EdgeInsets.only(right: 8),
-      child: FilterChip(
-        selected: isSelected,
-        label: Text(label),
-        labelStyle: GoogleFonts.poppins(
-          color: isSelected ? Colors.white : textSecondaryColor,
-          fontSize: 13,
-        ),
-        backgroundColor: Colors.transparent,
-        selectedColor: primaryColor,
-        checkmarkColor: Colors.white,
-        showCheckmark: false,
-        shape: StadiumBorder(
-          side: BorderSide(
-            color: isSelected ? primaryColor : Colors.grey.shade300,
-          ),
-        ),
-        onSelected: (_) {
-          setState(() {
-            selectedStatus = label;
-          });
-        },
-      ),
-    );
-  }
-
-  Widget _buildRequestCard(BuildContext context, Map<String, dynamic> request) {
-    Color statusColor;
-    IconData statusIcon;
-
-    switch (request["status"]) {
-      case "pending":
-        statusColor = Colors.orange;
-        statusIcon = Icons.schedule_rounded;
-        break;
-      case "bidding":
-        statusColor = Colors.blue;
-        statusIcon = Icons.gavel_rounded;
-        break;
-      case "in_progress":
-        statusColor = Colors.purple;
-        statusIcon = Icons.engineering_rounded;
-        break;
-      case "completed":
-        statusColor = Colors.green;
-        statusIcon = Icons.check_circle_rounded;
-        break;
-      default:
-        statusColor = Colors.grey;
-        statusIcon = Icons.help_outline_rounded;
-    }
-
-    return Container(
-      decoration: BoxDecoration(
-        color: surfaceColor,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Material(
-        color: Colors.transparent,
-        borderRadius: BorderRadius.circular(16),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(16),
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => RequestDetailsScreen(request: request),
-              ),
-            );
-          },
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: (request["color"] as Color).withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(12),
+    return RefreshIndicator(
+      onRefresh: _fetchRepairRequests,
+      color: primaryColor,
+      child: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : _error != null
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.error_outline,
+                          size: 48, color: Colors.red[300]),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Error loading repair requests',
+                        style: GoogleFonts.poppins(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                          color: textPrimaryColor,
+                        ),
                       ),
-                      child: Icon(
-                        request["icon"] as IconData,
-                        color: request["color"] as Color,
-                        size: 20,
+                      const SizedBox(height: 8),
+                      Text(
+                        _error!,
+                        style: GoogleFonts.poppins(
+                          fontSize: 14,
+                          color: textSecondaryColor,
+                        ),
+                        textAlign: TextAlign.center,
                       ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
+                      const SizedBox(height: 24),
+                      ElevatedButton(
+                        onPressed: _fetchRepairRequests,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: primaryColor,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                        child: Text('Try Again', style: GoogleFonts.poppins()),
+                      ),
+                    ],
+                  ),
+                )
+              : _repairRequests.isEmpty
+                  ? Center(
                       child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.center,
                         children: [
+                          Icon(Icons.history,
+                              size: 64, color: Colors.grey[400]),
+                          const SizedBox(height: 16),
                           Text(
-                            request["description"] as String,
+                            'No Repair Requests Yet',
                             style: GoogleFonts.poppins(
-                              fontSize: 16,
+                              fontSize: 18,
                               fontWeight: FontWeight.w600,
                               color: textPrimaryColor,
                             ),
                           ),
+                          const SizedBox(height: 8),
                           Text(
-                            request["serviceType"] as String,
+                            'Create a new request to get started',
                             style: GoogleFonts.poppins(
-                              fontSize: 13,
+                              fontSize: 14,
                               color: textSecondaryColor,
                             ),
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 24),
+                          ElevatedButton(
+                            onPressed: () {
+                              Navigator.pushNamed(context, '/repair_request')
+                                  .then((_) => _fetchRepairRequests());
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: accentColor,
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                            ),
+                            child: Text('Create Request',
+                                style: GoogleFonts.poppins()),
                           ),
                         ],
                       ),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: statusColor.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            statusIcon,
-                            size: 14,
-                            color: statusColor,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            (request["status"] as String),
-                            style: GoogleFonts.poppins(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
-                              color: statusColor,
+                    )
+                  : ListView.builder(
+                      padding: const EdgeInsets.all(16),
+                      itemCount: _repairRequests.length,
+                      itemBuilder: (context, index) {
+                        final request = _repairRequests[index];
+                        final createdAt = request['createdAt'] != null
+                            ? DateFormat('MMM dd, yyyy')
+                                .format(DateTime.parse(request['createdAt']))
+                            : 'Unknown date';
+
+                        final status = request['status'] ?? 'pending';
+                        final statusColor = _getStatusColor(status);
+
+                        return GestureDetector(
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => RequestDetailsScreen(
+                                  requestId: request['request_id'],
+                                ),
+                              ),
+                            ).then((_) => _fetchRepairRequests());
+                          },
+                          child: Container(
+                            margin: const EdgeInsets.only(bottom: 16),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(16),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.05),
+                                  blurRadius: 10,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(16),
+                                  decoration: BoxDecoration(
+                                    color: primaryColor.withOpacity(0.05),
+                                    borderRadius: const BorderRadius.only(
+                                      topLeft: Radius.circular(16),
+                                      topRight: Radius.circular(16),
+                                    ),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Icon(
+                                        Icons.home_repair_service,
+                                        color: primaryColor,
+                                        size: 20,
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: Text(
+                                          "Request #${request['request_id']}",
+                                          style: GoogleFonts.poppins(
+                                            fontWeight: FontWeight.w600,
+                                            fontSize: 14,
+                                            color: primaryColor,
+                                          ),
+                                        ),
+                                      ),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 8,
+                                          vertical: 4,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: Color(int.parse(
+                                                      statusColor.substring(
+                                                          1, 7),
+                                                      radix: 16) +
+                                                  0xFF000000)
+                                              .withOpacity(0.1),
+                                          borderRadius:
+                                              BorderRadius.circular(8),
+                                        ),
+                                        child: Text(
+                                          status.toUpperCase(),
+                                          style: GoogleFonts.poppins(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w500,
+                                            color: Color(int.parse(
+                                                    statusColor.substring(1, 7),
+                                                    radix: 16) +
+                                                0xFF000000),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                Padding(
+                                  padding: const EdgeInsets.all(16),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        request['description'] ??
+                                            'No description',
+                                        style: GoogleFonts.poppins(
+                                          fontSize: 14,
+                                          color: textPrimaryColor,
+                                        ),
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      const SizedBox(height: 16),
+                                      Row(
+                                        children: [
+                                          Icon(
+                                            Icons.location_on_outlined,
+                                            size: 16,
+                                            color: textSecondaryColor,
+                                          ),
+                                          const SizedBox(width: 4),
+                                          Expanded(
+                                            child: Text(
+                                              request['location'] ??
+                                                  'No location',
+                                              style: GoogleFonts.poppins(
+                                                fontSize: 12,
+                                                color: textSecondaryColor,
+                                              ),
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 8),
+                                      Row(
+                                        children: [
+                                          Icon(
+                                            Icons.calendar_today_outlined,
+                                            size: 16,
+                                            color: textSecondaryColor,
+                                          ),
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            'Created on $createdAt',
+                                            style: GoogleFonts.poppins(
+                                              fontSize: 12,
+                                              color: textSecondaryColor,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+
+                                      // Service type if available
+                                      if (request['service_type'] != null)
+                                        Padding(
+                                          padding:
+                                              const EdgeInsets.only(top: 8.0),
+                                          child: Row(
+                                            children: [
+                                              Icon(
+                                                Icons.category_outlined,
+                                                size: 16,
+                                                color: textSecondaryColor,
+                                              ),
+                                              const SizedBox(width: 4),
+                                              Container(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                        horizontal: 8,
+                                                        vertical: 4),
+                                                decoration: BoxDecoration(
+                                                  color: primaryColor
+                                                      .withOpacity(0.1),
+                                                  borderRadius:
+                                                      BorderRadius.circular(8),
+                                                ),
+                                                child: Text(
+                                                  request['service_type']
+                                                          ['name'] ??
+                                                      'Unknown',
+                                                  style: GoogleFonts.poppins(
+                                                    fontSize: 12,
+                                                    fontWeight: FontWeight.w500,
+                                                    color: primaryColor,
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+
+                                      // Bid information if any
+                                      if (request['bids'] != null &&
+                                          (request['bids'] as List).isNotEmpty)
+                                        Padding(
+                                          padding:
+                                              const EdgeInsets.only(top: 8.0),
+                                          child: Row(
+                                            children: [
+                                              Icon(
+                                                Icons.handshake_outlined,
+                                                size: 16,
+                                                color: accentColor,
+                                              ),
+                                              const SizedBox(width: 4),
+                                              Text(
+                                                "${(request['bids'] as List).length} bid(s) received",
+                                                style: GoogleFonts.poppins(
+                                                  fontSize: 12,
+                                                  fontWeight: FontWeight.w500,
+                                                  color: accentColor,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                    ],
+                                  ),
+                                ),
+                                Container(
+                                  width: double.infinity,
+                                  padding:
+                                      const EdgeInsets.symmetric(vertical: 12),
+                                  decoration: BoxDecoration(
+                                    color: Colors.grey[50],
+                                    borderRadius: const BorderRadius.only(
+                                      bottomLeft: Radius.circular(16),
+                                      bottomRight: Radius.circular(16),
+                                    ),
+                                  ),
+                                  child: Text(
+                                    'View Details',
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w500,
+                                      color: primaryColor,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                        ],
-                      ),
+                        );
+                      },
                     ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    const Icon(
-                      Icons.location_on_outlined,
-                      size: 16,
-                      color: Colors.grey,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      request["location"] as String,
-                      style: GoogleFonts.poppins(
-                        fontSize: 13,
-                        color: textSecondaryColor,
-                      ),
-                    ),
-                    const Spacer(),
-                    Text(
-                      request["date"] as String,
-                      style: GoogleFonts.poppins(
-                        fontSize: 13,
-                        color: textSecondaryColor,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
+    );
+  }
+
+  Widget _buildDetailCard(String title, Widget child) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: GoogleFonts.poppins(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: textPrimaryColor,
           ),
         ),
-      ),
+        const SizedBox(height: 8),
+        child,
+      ],
     );
   }
 }

@@ -1,7 +1,9 @@
 // lib/screens/auth/login_screen.dart
 import 'package:app/providers/auth_provider.dart';
+import 'package:app/utils/AppColor.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({Key? key}) : super(key: key);
@@ -16,6 +18,19 @@ class _LoginScreenState extends State<LoginScreen> {
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
   String _selectedUserType = 'customer'; // Default to customer
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final args = ModalRoute.of(context)?.settings.arguments;
+      if (args != null && args is String) {
+        setState(() {
+          _selectedUserType = args;
+        });
+      }
+    });
+  }
 
   @override
   void dispose() {
@@ -46,8 +61,10 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     final authProvider = Provider.of<AuthProvider>(context);
+    final size = MediaQuery.of(context).size;
 
     return Scaffold(
+      backgroundColor: backgroundColor,
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -56,40 +73,69 @@ class _LoginScreenState extends State<LoginScreen> {
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // Logo or App Icon
-                Icon(
-                  _selectedUserType == 'expert'
-                      ? Icons.engineering
-                      : Icons.person,
-                  size: 80,
-                  color: Colors.blue,
+                // App logo or icon
+                Center(
+                  child: Container(
+                    height: 100,
+                    width: 100,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(25),
+                      boxShadow: [
+                        BoxShadow(
+                          color: primaryColor.withOpacity(0.1),
+                          blurRadius: 20,
+                          offset: const Offset(0, 10),
+                        ),
+                      ],
+                    ),
+                    child: Icon(
+                      _selectedUserType == 'expert'
+                          ? Icons.engineering
+                          : Icons.person,
+                      size: 60,
+                      color: primaryColor,
+                    ),
+                  ),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 32),
+
+                // Welcome text
                 Text(
                   'Welcome Back',
                   textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
+                  style: GoogleFonts.poppins(
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                    color: textPrimaryColor,
+                  ),
                 ),
                 const SizedBox(height: 8),
                 Text(
                   'Sign in to continue',
                   textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                        color: Colors.grey[600],
-                      ),
+                  style: GoogleFonts.poppins(
+                    fontSize: 14,
+                    color: textSecondaryColor,
+                  ),
                 ),
-                const SizedBox(height: 32),
+                const SizedBox(height: 36),
 
                 // User Type Selector
                 Container(
                   decoration: BoxDecoration(
-                    color: Colors.grey[200],
-                    borderRadius: BorderRadius.circular(12),
+                    color: surfaceColor,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.05),
+                        blurRadius: 10,
+                        offset: const Offset(0, 5),
+                      ),
+                    ],
                   ),
                   padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
                   child: Row(
                     children: [
                       Expanded(
@@ -103,19 +149,33 @@ class _LoginScreenState extends State<LoginScreen> {
                             padding: const EdgeInsets.symmetric(vertical: 12),
                             decoration: BoxDecoration(
                               color: _selectedUserType == 'customer'
-                                  ? Colors.blue
+                                  ? primaryColor
                                   : Colors.transparent,
-                              borderRadius: BorderRadius.circular(8),
+                              borderRadius: BorderRadius.circular(12),
                             ),
-                            child: Text(
-                              'Customer',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: _selectedUserType == 'customer'
-                                    ? Colors.white
-                                    : Colors.black,
-                              ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.person,
+                                  size: 18,
+                                  color: _selectedUserType == 'customer'
+                                      ? Colors.white
+                                      : textSecondaryColor,
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'Customer',
+                                  textAlign: TextAlign.center,
+                                  style: GoogleFonts.poppins(
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 13,
+                                    color: _selectedUserType == 'customer'
+                                        ? Colors.white
+                                        : textSecondaryColor,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ),
@@ -131,19 +191,33 @@ class _LoginScreenState extends State<LoginScreen> {
                             padding: const EdgeInsets.symmetric(vertical: 12),
                             decoration: BoxDecoration(
                               color: _selectedUserType == 'expert'
-                                  ? Colors.blue
+                                  ? primaryColor
                                   : Colors.transparent,
-                              borderRadius: BorderRadius.circular(8),
+                              borderRadius: BorderRadius.circular(12),
                             ),
-                            child: Text(
-                              'Expert',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: _selectedUserType == 'expert'
-                                    ? Colors.white
-                                    : Colors.black,
-                              ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.engineering,
+                                  size: 18,
+                                  color: _selectedUserType == 'expert'
+                                      ? Colors.white
+                                      : textSecondaryColor,
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'Expert',
+                                  textAlign: TextAlign.center,
+                                  style: GoogleFonts.poppins(
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 13,
+                                    color: _selectedUserType == 'expert'
+                                        ? Colors.white
+                                        : textSecondaryColor,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ),
@@ -157,76 +231,148 @@ class _LoginScreenState extends State<LoginScreen> {
                 Form(
                   key: _formKey,
                   child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Email/Phone input
-                      TextFormField(
-                        controller: _identifierController,
-                        keyboardType: _selectedUserType == 'expert'
-                            ? TextInputType.emailAddress
-                            : TextInputType.phone,
-                        decoration: InputDecoration(
-                          labelText: _selectedUserType == 'expert'
-                              ? 'Email'
-                              : 'Phone Number',
-                          prefixIcon: Icon(
-                            _selectedUserType == 'expert'
-                                ? Icons.email
-                                : Icons.phone,
-                          ),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          filled: true,
-                          fillColor: Colors.grey[100],
+                      // Email/Phone label
+                      Text(
+                        _selectedUserType == 'expert'
+                            ? 'Email'
+                            : 'Phone Number',
+                        style: GoogleFonts.poppins(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                          color: textPrimaryColor,
                         ),
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return _selectedUserType == 'expert'
-                                ? 'Please enter your email'
-                                : 'Please enter your phone number';
-                          }
-                          if (_selectedUserType == 'expert' &&
-                              !value.contains('@')) {
-                            return 'Please enter a valid email';
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 16),
-
-                      // Password input
-                      TextFormField(
-                        controller: _passwordController,
-                        obscureText: _obscurePassword,
-                        decoration: InputDecoration(
-                          labelText: 'Password',
-                          prefixIcon: const Icon(Icons.lock),
-                          suffixIcon: IconButton(
-                            icon: Icon(
-                              _obscurePassword
-                                  ? Icons.visibility
-                                  : Icons.visibility_off,
-                            ),
-                            onPressed: () {
-                              setState(() {
-                                _obscurePassword = !_obscurePassword;
-                              });
-                            },
-                          ),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          filled: true,
-                          fillColor: Colors.grey[100],
-                        ),
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Please enter your password';
-                          }
-                          return null;
-                        },
                       ),
                       const SizedBox(height: 8),
+
+                      // Email/Phone input
+                      Container(
+                        decoration: BoxDecoration(
+                          color: surfaceColor,
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.03),
+                              blurRadius: 10,
+                              offset: const Offset(0, 5),
+                            ),
+                          ],
+                        ),
+                        child: TextFormField(
+                          controller: _identifierController,
+                          keyboardType: _selectedUserType == 'expert'
+                              ? TextInputType.emailAddress
+                              : TextInputType.phone,
+                          decoration: InputDecoration(
+                            hintText: _selectedUserType == 'expert'
+                                ? 'example@email.com'
+                                : '07xxxxxxxx',
+                            hintStyle: GoogleFonts.poppins(
+                              color: Colors.grey,
+                              fontSize: 14,
+                            ),
+                            prefixIcon: Icon(
+                              _selectedUserType == 'expert'
+                                  ? Icons.email_outlined
+                                  : Icons.phone_outlined,
+                              color: primaryColor,
+                            ),
+                            border: InputBorder.none,
+                            contentPadding: const EdgeInsets.symmetric(
+                              vertical: 16,
+                              horizontal: 20,
+                            ),
+                          ),
+                          style: GoogleFonts.poppins(
+                            color: textPrimaryColor,
+                            fontSize: 14,
+                          ),
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return _selectedUserType == 'expert'
+                                  ? 'Please enter your email'
+                                  : 'Please enter your phone number';
+                            }
+                            if (_selectedUserType == 'expert' &&
+                                !value.contains('@')) {
+                              return 'Please enter a valid email';
+                            }
+                            return null;
+                          },
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+
+                      // Password label
+                      Text(
+                        'Password',
+                        style: GoogleFonts.poppins(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                          color: textPrimaryColor,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+
+                      // Password input
+                      Container(
+                        decoration: BoxDecoration(
+                          color: surfaceColor,
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.03),
+                              blurRadius: 10,
+                              offset: const Offset(0, 5),
+                            ),
+                          ],
+                        ),
+                        child: TextFormField(
+                          controller: _passwordController,
+                          obscureText: _obscurePassword,
+                          decoration: InputDecoration(
+                            hintText: '••••••••',
+                            hintStyle: GoogleFonts.poppins(
+                              color: Colors.grey,
+                              fontSize: 14,
+                            ),
+                            prefixIcon: Icon(
+                              Icons.lock_outline,
+                              color: primaryColor,
+                            ),
+                            suffixIcon: IconButton(
+                              icon: Icon(
+                                _obscurePassword
+                                    ? Icons.visibility_outlined
+                                    : Icons.visibility_off_outlined,
+                                color: primaryColor,
+                              ),
+                              onPressed: () {
+                                setState(() {
+                                  _obscurePassword = !_obscurePassword;
+                                });
+                              },
+                            ),
+                            border: InputBorder.none,
+                            contentPadding: const EdgeInsets.symmetric(
+                              vertical: 16,
+                              horizontal: 20,
+                            ),
+                          ),
+                          style: GoogleFonts.poppins(
+                            color: textPrimaryColor,
+                            fontSize: 14,
+                          ),
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Please enter your password';
+                            }
+                            return null;
+                          },
+                        ),
+                      ),
+                      const SizedBox(height: 12),
 
                       // Forgot Password
                       Align(
@@ -235,13 +381,22 @@ class _LoginScreenState extends State<LoginScreen> {
                           onPressed: () {
                             // Navigate to forgot password screen
                           },
-                          child: const Text(
+                          style: TextButton.styleFrom(
+                            padding: EdgeInsets.zero,
+                            minimumSize: const Size(50, 30),
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          ),
+                          child: Text(
                             'Forgot Password?',
-                            style: TextStyle(color: Colors.blue),
+                            style: GoogleFonts.poppins(
+                              color: accentColor,
+                              fontWeight: FontWeight.w500,
+                              fontSize: 13,
+                            ),
                           ),
                         ),
                       ),
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 20),
 
                       // Error message
                       if (authProvider.error != null)
@@ -251,7 +406,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           margin: const EdgeInsets.only(bottom: 16),
                           decoration: BoxDecoration(
                             color: Colors.red.shade50,
-                            borderRadius: BorderRadius.circular(8),
+                            borderRadius: BorderRadius.circular(12),
                             border: Border.all(color: Colors.red.shade200),
                           ),
                           child: Row(
@@ -262,7 +417,10 @@ class _LoginScreenState extends State<LoginScreen> {
                               Expanded(
                                 child: Text(
                                   authProvider.error!,
-                                  style: TextStyle(color: Colors.red.shade800),
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 13,
+                                    color: Colors.red.shade800,
+                                  ),
                                 ),
                               ),
                             ],
@@ -270,39 +428,61 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
 
                       // Login button
-                      SizedBox(
+                      Container(
                         width: double.infinity,
-                        height: 50,
+                        height: 55,
+                        margin: const EdgeInsets.only(top: 8),
+                        decoration: BoxDecoration(
+                          boxShadow: [
+                            BoxShadow(
+                              color: accentColor.withOpacity(0.3),
+                              blurRadius: 15,
+                              offset: const Offset(0, 8),
+                            ),
+                          ],
+                        ),
                         child: ElevatedButton(
                           onPressed: authProvider.isLoading ? null : _login,
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.blue,
+                            backgroundColor: accentColor,
                             foregroundColor: Colors.white,
+                            elevation: 0,
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
+                              borderRadius: BorderRadius.circular(16),
                             ),
-                            elevation: 2,
+                            padding: EdgeInsets.zero,
                           ),
                           child: authProvider.isLoading
-                              ? const CircularProgressIndicator(
-                                  color: Colors.white)
+                              ? SizedBox(
+                                  height: 24,
+                                  width: 24,
+                                  child: CircularProgressIndicator(
+                                    color: Colors.white,
+                                    strokeWidth: 2,
+                                  ),
+                                )
                               : Text(
-                                  'Login as ${_selectedUserType == 'expert' ? 'Expert' : 'Customer'}',
-                                  style: const TextStyle(
+                                  'Sign In',
+                                  style: GoogleFonts.poppins(
                                     fontSize: 16,
-                                    fontWeight: FontWeight.bold,
+                                    fontWeight: FontWeight.w600,
                                   ),
                                 ),
                         ),
                       ),
-
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 30),
 
                       // Register link
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const Text("Don't have an account?"),
+                          Text(
+                            "Don't have an account?",
+                            style: GoogleFonts.poppins(
+                              color: textSecondaryColor,
+                              fontSize: 14,
+                            ),
+                          ),
                           TextButton(
                             onPressed: () {
                               Navigator.pushReplacementNamed(
@@ -311,11 +491,18 @@ class _LoginScreenState extends State<LoginScreen> {
                                 arguments: _selectedUserType,
                               );
                             },
-                            child: const Text(
+                            style: TextButton.styleFrom(
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 8),
+                              minimumSize: Size.zero,
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            ),
+                            child: Text(
                               'Register Now',
-                              style: TextStyle(
-                                color: Colors.blue,
-                                fontWeight: FontWeight.bold,
+                              style: GoogleFonts.poppins(
+                                color: accentColor,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 14,
                               ),
                             ),
                           ),

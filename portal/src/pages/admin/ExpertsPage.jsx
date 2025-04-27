@@ -22,7 +22,7 @@ export const ExpertsPage = () => {
   const [formData, setFormData] = useState({
     full_name: "",
     email: "",
-    service_type_id: "",
+    service_type_ids: [],
     address: "",
     password: "",
   });
@@ -42,9 +42,14 @@ export const ExpertsPage = () => {
       header: "Address",
     },
     {
-      accessorKey: "service_type",
-      header: "Service Type",
-      cell: ({ row }) => row.original.service_type_name || "N/A",
+      accessorKey: "service_types",
+      header: "Service Types",
+      cell: ({ row }) => {
+        const expert = row.original;
+        return expert.service_types && expert.service_types.length > 0
+          ? expert.service_types.map(st => st.name).join(", ")
+          : "N/A";
+      },
     },
     {
       id: "actions",
@@ -129,7 +134,7 @@ export const ExpertsPage = () => {
     setFormData({
       full_name: "",
       email: "",
-      service_type_id: "",
+      service_type_ids: [],
       address: "",
       password: "",
     });
@@ -141,7 +146,7 @@ export const ExpertsPage = () => {
     setFormData({
       full_name: expert.full_name,
       email: expert.email,
-      service_type_id: expert.service_type_id,
+      service_type_ids: expert.service_types ? expert.service_types.map(st => st.service_type_id) : [],
       address: expert.address,
       password: "", // Don't populate password in edit mode
     });
@@ -159,6 +164,26 @@ export const ExpertsPage = () => {
       ...prev,
       [name]: value,
     }));
+  };
+
+  const handleServiceTypeChange = (serviceTypeId) => {
+    setFormData((prev) => {
+      const currentServiceTypeIds = [...prev.service_type_ids];
+      const index = currentServiceTypeIds.indexOf(serviceTypeId);
+      
+      if (index === -1) {
+        // Add service type if not present
+        currentServiceTypeIds.push(serviceTypeId);
+      } else {
+        // Remove service type if already present
+        currentServiceTypeIds.splice(index, 1);
+      }
+      
+      return {
+        ...prev,
+        service_type_ids: currentServiceTypeIds,
+      };
+    });
   };
 
   const handleAdd = async (e) => {
@@ -182,7 +207,7 @@ export const ExpertsPage = () => {
 
       if (response.data.success) {
         setIsAddDialogOpen(false);
-        setExperts((prev) => [...prev, response.data.data]);
+        fetchExperts(); // Refresh the expert list
       }
     } catch (error) {
       toast({
@@ -211,13 +236,7 @@ export const ExpertsPage = () => {
 
       if (response.data.success) {
         setIsEditDialogOpen(false);
-        setExperts((prev) =>
-          prev.map((expert) =>
-            expert.expert_id === selectedExpert.expert_id
-              ? response.data.data
-              : expert
-          )
-        );
+        fetchExperts(); // Refresh the expert list
       }
     } catch (error) {
       toast({
@@ -256,14 +275,24 @@ export const ExpertsPage = () => {
   };
 
   const validateForm = () => {
-    if (!formData.full_name || !formData.email || !formData.address || !formData.service_type_id) {
+    if (!formData.full_name || !formData.email || !formData.address) {
       toast({
         variant: "destructive",
         title: "Validation Error",
-        description: "All fields are required",
+        description: "Name, email, and address are required",
       });
       return false;
     }
+
+    if (formData.service_type_ids.length === 0) {
+      toast({
+        variant: "destructive",
+        title: "Validation Error",
+        description: "Please select at least one service type",
+      });
+      return false;
+    }
+    
     return true;
   };
 
@@ -313,21 +342,26 @@ export const ExpertsPage = () => {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="service_type_id">Service Type</Label>
-              <select
-                id="service_type_id"
-                name="service_type_id"
-                value={formData.service_type_id}
-                onChange={handleInputChange}
-                className="w-full border rounded-md p-2"
-              >
-                <option value="">Select Service Type</option>
+              <Label>Service Types</Label>
+              <div className="max-h-48 overflow-y-auto border rounded-md p-2">
                 {serviceTypes.map((type) => (
-                  <option key={type.service_type_id} value={type.service_type_id}>
+                  <div key={type.service_type_id} className="flex items-center space-x-2 py-1">
+                    <input
+                      type="checkbox"
+                      id={`service-type-${type.service_type_id}`}
+                      checked={formData.service_type_ids.includes(type.service_type_id)}
+                      onChange={() => handleServiceTypeChange(type.service_type_id)}
+                      className="h-4 w-4"
+                    />
+                    <Label htmlFor={`service-type-${type.service_type_id}`} className="cursor-pointer">
                     {type.name}
-                  </option>
+                    </Label>
+                  </div>
                 ))}
-              </select>
+              </div>
+              {formData.service_type_ids.length === 0 && (
+                <p className="text-sm text-red-500">Please select at least one service type</p>
+              )}
             </div>
             <div className="space-y-2">
               <Label htmlFor="address">Address</Label>
@@ -388,21 +422,26 @@ export const ExpertsPage = () => {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="edit-service_type_id">Service Type</Label>
-              <select
-                id="edit-service_type_id"
-                name="service_type_id"
-                value={formData.service_type_id}
-                onChange={handleInputChange}
-                className="w-full border rounded-md p-2"
-              >
-                <option value="">Select Service Type</option>
+              <Label>Service Types</Label>
+              <div className="max-h-48 overflow-y-auto border rounded-md p-2">
                 {serviceTypes.map((type) => (
-                  <option key={type.service_type_id} value={type.service_type_id}>
+                  <div key={type.service_type_id} className="flex items-center space-x-2 py-1">
+                    <input
+                      type="checkbox"
+                      id={`edit-service-type-${type.service_type_id}`}
+                      checked={formData.service_type_ids.includes(type.service_type_id)}
+                      onChange={() => handleServiceTypeChange(type.service_type_id)}
+                      className="h-4 w-4"
+                    />
+                    <Label htmlFor={`edit-service-type-${type.service_type_id}`} className="cursor-pointer">
                     {type.name}
-                  </option>
+                    </Label>
+                  </div>
                 ))}
-              </select>
+              </div>
+              {formData.service_type_ids.length === 0 && (
+                <p className="text-sm text-red-500">Please select at least one service type</p>
+              )}
             </div>
             <div className="space-y-2">
               <Label htmlFor="edit-address">Address</Label>

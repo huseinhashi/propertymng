@@ -7,6 +7,10 @@ const ServiceOrder = sequelize.define("service_order", {
     primaryKey: true,
     autoIncrement: true,
   },
+  bid_id: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+  },
   base_price: {
     type: DataTypes.DECIMAL(10, 2),
     allowNull: false,
@@ -33,7 +37,14 @@ const ServiceOrder = sequelize.define("service_order", {
     ),
     defaultValue: "unpaid",
   },
+  completion_notes: {
+    type: DataTypes.TEXT,
+    defaultValue: "",
+  },
   deadline: {
+    type: DataTypes.DATE,
+  },
+  completed_at: {
     type: DataTypes.DATE,
   },
 });

@@ -7,25 +7,32 @@ const Payment = sequelize.define("payment", {
     primaryKey: true,
     autoIncrement: true,
   },
-  type: {
-    type: DataTypes.ENUM("initial", "extra"),
+  service_order_id: {
+    type: DataTypes.INTEGER,
     allowNull: false,
-  },
-  reason: {
-    type: DataTypes.TEXT,
-    defaultValue: "Initial payment",
   },
   amount: {
     type: DataTypes.DECIMAL(10, 2),
     allowNull: false,
   },
+  type: {
+    type: DataTypes.ENUM("initial", "extra", "refund"),
+    defaultValue: "initial",
+  },
+  reason: {
+    type: DataTypes.STRING,
+    defaultValue: "Initial payment",
+  },
   status: {
-    type: DataTypes.ENUM("pending", "paid"),
+    type: DataTypes.ENUM("pending", "paid", "refunded", "cancelled"),
     defaultValue: "pending",
   },
   paid_at: {
     type: DataTypes.DATE,
-    defaultValue: DataTypes.NOW,
+  },
+  transaction_ref: {
+    type: DataTypes.STRING,
+    comment: "Reference ID from the payment gateway",
   },
 });
 

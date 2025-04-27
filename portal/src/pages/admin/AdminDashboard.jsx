@@ -10,6 +10,8 @@ import {
   CheckCircle,
   Clock,
   DollarSign,
+  ShoppingCart,
+  Truck,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
@@ -21,10 +23,12 @@ export const AdminDashboard = () => {
       totalRequests: 0,
       completedRequests: 0,
       pendingRequests: 0,
+      totalOrders: 0,
+      completedOrders: 0,
       totalRevenue: 0,
     },
     recentRequests: [],
-    recentPayments: [],
+    recentOrders: [],
   });
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
@@ -36,9 +40,51 @@ export const AdminDashboard = () => {
   const fetchDashboardStats = async () => {
     try {
       setIsLoading(true);
-      const response = await api.get("/admin/dashboard/stats");
-      setStats(response.data.data);
+      
+      // Fetch all required data in parallel
+      const [
+        customersResponse, 
+        expertsResponse, 
+        repairRequestsResponse,
+        serviceOrdersStatsResponse
+      ] = await Promise.all([
+        api.get("/admin/customers"),
+        api.get("/admin/experts"),
+        api.get("/admin/repair-requests"),
+        api.get("/admin/service-orders-stats")
+      ]);
+      
+      // Calculate counts from the retrieved data
+      const customers = customersResponse.data.data || [];
+      const experts = expertsResponse.data.data || [];
+      const repairRequests = repairRequestsResponse.data.data || [];
+      const serviceOrdersStats = serviceOrdersStatsResponse.data.data || {};
+      
+      // Process repair requests to get status counts
+      const completedRequests = repairRequests.filter(req => req.status === "closed").length;
+      const pendingRequests = repairRequests.filter(req => req.status === "pending" || req.status === "bidding").length;
+      
+      // Get most recent repair requests
+      const recentRequests = [...repairRequests]
+        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+        .slice(0, 5);
+      
+      setStats({
+        counts: {
+          clients: customers.length,
+          experts: experts.length,
+          totalRequests: repairRequests.length,
+          completedRequests,
+          pendingRequests,
+          totalOrders: serviceOrdersStats.totalOrders || 0,
+          completedOrders: (serviceOrdersStats.byStatus?.completed || 0) + (serviceOrdersStats.byStatus?.delivered || 0),
+          totalRevenue: serviceOrdersStats.totalRevenue || 0,
+        },
+        recentRequests,
+        recentOrders: serviceOrdersStats.recentOrders || [],
+      });
     } catch (error) {
+      console.error("Error fetching dashboard data:", error);
       toast({
         variant: "destructive",
         title: "Error",
@@ -66,25 +112,31 @@ export const AdminDashboard = () => {
       title: "Service Requests",
       value: stats.counts.totalRequests,
       icon: FileText,
-      description: "Total service requests",
-    },
-    {
-      title: "Completed Services",
-      value: stats.counts.completedRequests,
-      icon: CheckCircle,
-      description: "Successfully completed services",
+      description: "Total repair requests",
     },
     {
       title: "Pending Requests",
       value: stats.counts.pendingRequests,
       icon: Clock,
-      description: "Awaiting assignment or completion",
+      description: "Awaiting bids or acceptance",
+    },
+    {
+      title: "Service Orders",
+      value: stats.counts.totalOrders,
+      icon: ShoppingCart,
+      description: "Total service orders",
+    },
+    {
+      title: "Completed Services",
+      value: stats.counts.completedOrders,
+      icon: Truck,
+      description: "Completed and delivered services",
     },
     {
       title: "Total Revenue",
       value: `$${stats.counts.totalRevenue.toFixed(2)}`,
       icon: DollarSign,
-      description: "Total revenue from completed services",
+      description: "Total revenue from paid services",
     },
   ];
 
@@ -93,11 +145,11 @@ export const AdminDashboard = () => {
       <div className="flex justify-between items-center">
         <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
         <Button onClick={fetchDashboardStats} disabled={isLoading}>
-          Refresh Data
+          {isLoading ? "Loading..." : "Refresh Data"}
         </Button>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-4">
         {cards.map((card) => (
           <Card key={card.title}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -123,60 +175,81 @@ export const AdminDashboard = () => {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {stats.recentRequests.map((request) => (
-                <div
-                  key={request._id}
-                  className="flex items-center justify-between"
-                >
-                  <div>
-                    <p className="font-medium">{request.title}</p>
-                    <p className="text-sm text-muted-foreground">
-                      Client: {request.client?.name}
-                    </p>
+              {stats.recentRequests.length > 0 ? (
+                stats.recentRequests.map((request) => (
+                  <div
+                    key={request.request_id}
+                    className="flex items-center justify-between"
+                  >
+                    <div>
+                      <p className="font-medium">Request #{request.request_id}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {request.description?.length > 30
+                          ? request.description.substring(0, 30) + "..."
+                          : request.description}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        Client: {request.customer?.name || "Unknown"}
+                      </p>
+                    </div>
+                    <Badge variant={
+                      request.status === "closed" 
+                        ? "success" 
+                        : request.status === "pending"
+                        ? "warning"
+                        : request.status === "bidding"
+                        ? "secondary"
+                        : "default"
+                    }>
+                      {request.status.toUpperCase()}
+                    </Badge>
                   </div>
-                  <Badge variant={
-                    request.status === "completed" 
-                      ? "success" 
-                      : request.status === "pending"
-                      ? "warning"
-                      : "secondary"
-                  }>
-                    {request.status}
-                  </Badge>
-                </div>
-              ))}
+                ))
+              ) : (
+                <p className="text-center text-muted-foreground">No recent requests found</p>
+              )}
             </div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle>Recent Payments</CardTitle>
+            <CardTitle>Recent Service Orders</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {stats.recentPayments.map((payment) => (
-                <div
-                  key={payment._id}
-                  className="flex items-center justify-between"
-                >
-                  <div>
-                    <p className="font-medium">
-                      ${payment.amount.toFixed(2)}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      {payment.client?.name} - {payment.serviceRequest?.title}
-                    </p>
+              {stats.recentOrders.length > 0 ? (
+                stats.recentOrders.map((order) => (
+                  <div
+                    key={order.service_order_id}
+                    className="flex items-center justify-between"
+                  >
+                    <div>
+                      <p className="font-medium">
+                        Order #{order.service_order_id}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        ${parseFloat(order.total_price || 0).toFixed(2)}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        {order.bid?.repair_request?.customer?.name || "Unknown Customer"}
+                        {order.bid?.expert ? ` - ${order.bid.expert.full_name}` : ''}
+                      </p>
+                    </div>
+                    <Badge variant={
+                      order.payment_status === "fully_paid" 
+                        ? "success" 
+                        : order.payment_status === "partially_paid"
+                        ? "warning"
+                        : "default"
+                    }>
+                      {order.payment_status?.toUpperCase().replace("_", " ") || "UNKNOWN"}
+                    </Badge>
                   </div>
-                  <Badge variant={
-                    payment.status === "completed" 
-                      ? "success" 
-                      : "secondary"
-                  }>
-                    {payment.status}
-                  </Badge>
-                </div>
-              ))}
+                ))
+              ) : (
+                <p className="text-center text-muted-foreground">No recent orders found</p>
+              )}
             </div>
           </CardContent>
         </Card>

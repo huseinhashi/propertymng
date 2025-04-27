@@ -4,7 +4,10 @@ import { JWT_SECRET, JWT_EXPIRES_IN } from "../config/env.js";
 import Expert from "../models/expert.model.js";
 import Customer from "../models/customer.model.js";
 import Admin from "../models/admin.model.js";
+import ExpertServiceType from "../models/expert-service-type.model.js";
+import ServiceType from "../models/service-type.model.js";
 import { validationResult } from "express-validator";
+import sequelize from "../database/db.js";
 
 // Helper function to generate JWT
 const generateToken = (payload) => {
@@ -20,7 +23,7 @@ export const registerExpert = async (req, res, next) => {
       return res.status(400).json({ errors: errors.array() });
     }
 
-    const { full_name, email, password, service_type_id, address } = req.body;
+    const { full_name, email, password, service_type_ids, address } = req.body;
 
     const existingExpert = await Expert.findOne({ where: { email } });
     if (existingExpert) {
@@ -29,23 +32,45 @@ export const registerExpert = async (req, res, next) => {
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    const expert = await Expert.create({
-      full_name,
-      email,
-      password_hash: hashedPassword,
-      service_type_id,
-      address,
-    });
+    // Start transaction
+    const transaction = await sequelize.transaction();
 
-    res.status(201).json({
-      success: true,
-      message: "Expert registered successfully",
-      data: {
-        id: expert.expert_id,
-        full_name: expert.full_name,
-        email: expert.email,
-      },
-    });
+    try {
+      const expert = await Expert.create(
+        {
+          full_name,
+          email,
+          password_hash: hashedPassword,
+          address,
+        },
+        { transaction }
+      );
+
+      // Add service types
+      if (service_type_ids && service_type_ids.length > 0) {
+        const expertServiceTypes = service_type_ids.map((service_type_id) => ({
+          expert_id: expert.expert_id,
+          service_type_id,
+        }));
+
+        await ExpertServiceType.bulkCreate(expertServiceTypes, { transaction });
+      }
+
+      await transaction.commit();
+
+      res.status(201).json({
+        success: true,
+        message: "Expert registered successfully",
+        data: {
+          id: expert.expert_id,
+          full_name: expert.full_name,
+          email: expert.email,
+        },
+      });
+    } catch (error) {
+      await transaction.rollback();
+      throw error;
+    }
   } catch (error) {
     next(error);
   }
@@ -62,7 +87,11 @@ export const loginExpert = async (req, res, next) => {
 
     const { email, password } = req.body;
 
-    const expert = await Expert.findOne({ where: { email } });
+    const expert = await Expert.findOne({
+      where: { email },
+      include: [ServiceType],
+    });
+
     if (!expert) {
       return res.status(404).json({ message: "Expert not found" });
     }
@@ -89,6 +118,7 @@ export const loginExpert = async (req, res, next) => {
           id: expert.expert_id,
           full_name: expert.full_name,
           email: expert.email,
+          service_types: expert.service_types,
         },
       },
     });

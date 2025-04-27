@@ -2,6 +2,7 @@ import Admin from "./admin.model.js";
 import Customer from "./customer.model.js";
 import Expert from "./expert.model.js";
 import ServiceType from "./service-type.model.js";
+import ExpertServiceType from "./expert-service-type.model.js";
 import RepairRequest from "./repair-request.model.js";
 import ServiceImage from "./service-image.model.js";
 import Bid from "./bid.model.js";
@@ -12,11 +13,24 @@ import RefundRequest from "./refund-request.model.js";
 import Rating from "./rating.model.js";
 
 // Relationships
-ServiceType.hasMany(Expert, { foreignKey: "service_type_id" });
-Expert.belongsTo(ServiceType, { foreignKey: "service_type_id" });
+// Many-to-many relationship between Expert and ServiceType
+Expert.belongsToMany(ServiceType, {
+  through: ExpertServiceType,
+  foreignKey: "expert_id",
+  otherKey: "service_type_id",
+});
+ServiceType.belongsToMany(Expert, {
+  through: ExpertServiceType,
+  foreignKey: "service_type_id",
+  otherKey: "expert_id",
+});
 
 Customer.hasMany(RepairRequest, { foreignKey: "customer_id" });
 RepairRequest.belongsTo(Customer, { foreignKey: "customer_id" });
+
+// Add relationship between RepairRequest and ServiceType
+ServiceType.hasMany(RepairRequest, { foreignKey: "service_type_id" });
+RepairRequest.belongsTo(ServiceType, { foreignKey: "service_type_id" });
 
 RepairRequest.hasMany(ServiceImage, { foreignKey: "request_id" });
 ServiceImage.belongsTo(RepairRequest, { foreignKey: "request_id" });
@@ -29,6 +43,12 @@ Bid.belongsTo(Expert, { foreignKey: "expert_id" });
 
 RepairRequest.hasMany(ServiceOrder, { foreignKey: "request_id" });
 ServiceOrder.belongsTo(RepairRequest, { foreignKey: "request_id" });
+
+Customer.hasMany(RepairRequest, { foreignKey: "customer_id" });
+RepairRequest.belongsTo(Customer, { foreignKey: "customer_id" });
+// Add relationship between ServiceOrder and Bid
+Bid.hasOne(ServiceOrder, { foreignKey: "bid_id" });
+ServiceOrder.belongsTo(Bid, { foreignKey: "bid_id" });
 
 Customer.hasMany(ServiceOrder, { foreignKey: "customer_id" });
 ServiceOrder.belongsTo(Customer, { foreignKey: "customer_id" });
@@ -62,6 +82,7 @@ export {
   Customer,
   Expert,
   ServiceType,
+  ExpertServiceType,
   RepairRequest,
   ServiceImage,
   Bid,

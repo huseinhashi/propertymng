@@ -61,7 +61,7 @@ class AuthService {
     String fullName,
     String email,
     String password,
-    int serviceTypeId,
+    List<int> serviceTypeIds,
     String address,
   ) async {
     try {
@@ -72,7 +72,7 @@ class AuthService {
           'full_name': fullName,
           'email': email,
           'password': password,
-          'service_type_id': serviceTypeId,
+          'service_type_ids': serviceTypeIds,
           'address': address,
         },
       );

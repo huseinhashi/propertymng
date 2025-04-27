@@ -7,6 +7,10 @@ const Payout = sequelize.define("payout", {
     primaryKey: true,
     autoIncrement: true,
   },
+  service_order_id: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+  },
   total_payment: {
     type: DataTypes.DECIMAL(10, 2),
     allowNull: false,
@@ -18,7 +22,6 @@ const Payout = sequelize.define("payout", {
   net_payout: {
     type: DataTypes.DECIMAL(10, 2),
     allowNull: false,
-    // Sequelize does not support `GENERATED ALWAYS AS` directly, so we calculate this in the application logic.
   },
   payout_status: {
     type: DataTypes.ENUM("pending", "released"),

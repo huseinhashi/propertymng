@@ -10,4 +10,7 @@ export const {
   MYSQL_PORT,
   JWT_SECRET,
   JWT_EXPIRES_IN,
+  MERCHANT_API_KEY,
+  MERCHANT_API_USER_ID,
+  MERCHANT_U_ID,
 } = process.env;

@@ -28,6 +28,7 @@ class AuthProvider extends ChangeNotifier {
   Future<void> checkAuth() async {
     try {
       _setLoading(true);
+      _clearError();
       await _authService.initialize();
     } catch (e) {
       _setError('Authentication check failed: $e');
@@ -41,7 +42,7 @@ class AuthProvider extends ChangeNotifier {
     String fullName,
     String email,
     String password,
-    int serviceTypeId,
+    List<int> serviceTypeIds,
     String address,
   ) async {
     return _performAuthOperation(() async {
@@ -49,7 +50,7 @@ class AuthProvider extends ChangeNotifier {
         fullName,
         email,
         password,
-        serviceTypeId,
+        serviceTypeIds,
         address,
       );
     });
@@ -85,6 +86,7 @@ class AuthProvider extends ChangeNotifier {
   }
 
   Future<bool> logout() async {
+    _clearError();
     return _performAuthOperation(() async {
       return await _authService.logout();
     });

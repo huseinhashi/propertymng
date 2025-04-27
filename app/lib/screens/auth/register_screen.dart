@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:app/providers/auth_provider.dart';
 import 'package:app/services/api_client.dart';
+import 'package:app/utils/AppColor.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({Key? key}) : super(key: key);
@@ -23,7 +25,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool _obscureConfirmPassword = true;
   String _selectedUserType = 'customer'; // Default to customer
   List<Map<String, dynamic>> _serviceTypes = [];
-  int? _selectedServiceTypeId;
+  List<int> _selectedServiceTypeIds = [];
   bool _isLoadingServiceTypes = false;
   String? _serviceTypeError;
 
@@ -70,7 +72,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
         setState(() {
           _serviceTypes = List<Map<String, dynamic>>.from(response['data']);
           if (_serviceTypes.isNotEmpty) {
-            _selectedServiceTypeId = _serviceTypes.first['service_type_id'];
+            _selectedServiceTypeIds = [
+              _serviceTypes.first['service_type_id'] as int
+            ];
           }
         });
       } else {
@@ -96,11 +100,22 @@ class _RegisterScreenState extends State<RegisterScreen> {
       bool success;
 
       if (_selectedUserType == 'expert') {
+        // Validate service types
+        if (_selectedServiceTypeIds.isEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Please select at least one service type'),
+              backgroundColor: Colors.red,
+            ),
+          );
+          return;
+        }
+
         success = await authProvider.registerExpert(
           _nameController.text.trim(),
           _emailController.text.trim(),
           _passwordController.text,
-          _selectedServiceTypeId ?? 1,
+          _selectedServiceTypeIds,
           _addressController.text.trim(),
         );
       } else {
@@ -127,13 +142,24 @@ class _RegisterScreenState extends State<RegisterScreen> {
   @override
   Widget build(BuildContext context) {
     final authProvider = Provider.of<AuthProvider>(context);
+    final size = MediaQuery.of(context).size;
 
     return Scaffold(
+      backgroundColor: backgroundColor,
       appBar: AppBar(
-        title: const Text('Create Account'),
-        backgroundColor: Colors.blue,
-        foregroundColor: Colors.white,
+        title: Text(
+          'Create Account',
+          style: GoogleFonts.poppins(
+            fontWeight: FontWeight.w600,
+            color: Colors.white,
+          ),
+        ),
+        backgroundColor: primaryColor,
         elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
       ),
       body: SafeArea(
         child: Center(
@@ -146,11 +172,18 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 // User Type Selector
                 Container(
                   decoration: BoxDecoration(
-                    color: Colors.grey[200],
-                    borderRadius: BorderRadius.circular(12),
+                    color: surfaceColor,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.05),
+                        blurRadius: 10,
+                        offset: const Offset(0, 5),
+                      ),
+                    ],
                   ),
                   padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
                   child: Row(
                     children: [
                       Expanded(
@@ -164,19 +197,33 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             padding: const EdgeInsets.symmetric(vertical: 12),
                             decoration: BoxDecoration(
                               color: _selectedUserType == 'customer'
-                                  ? Colors.blue
+                                  ? primaryColor
                                   : Colors.transparent,
-                              borderRadius: BorderRadius.circular(8),
+                              borderRadius: BorderRadius.circular(12),
                             ),
-                            child: Text(
-                              'Customer',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: _selectedUserType == 'customer'
-                                    ? Colors.white
-                                    : Colors.black,
-                              ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.person,
+                                  size: 18,
+                                  color: _selectedUserType == 'customer'
+                                      ? Colors.white
+                                      : textSecondaryColor,
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'Customer',
+                                  textAlign: TextAlign.center,
+                                  style: GoogleFonts.poppins(
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 13,
+                                    color: _selectedUserType == 'customer'
+                                        ? Colors.white
+                                        : textSecondaryColor,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ),
@@ -193,19 +240,33 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             padding: const EdgeInsets.symmetric(vertical: 12),
                             decoration: BoxDecoration(
                               color: _selectedUserType == 'expert'
-                                  ? Colors.blue
+                                  ? primaryColor
                                   : Colors.transparent,
-                              borderRadius: BorderRadius.circular(8),
+                              borderRadius: BorderRadius.circular(12),
                             ),
-                            child: Text(
-                              'Expert',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: _selectedUserType == 'expert'
-                                    ? Colors.white
-                                    : Colors.black,
-                              ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.engineering,
+                                  size: 18,
+                                  color: _selectedUserType == 'expert'
+                                      ? Colors.white
+                                      : textSecondaryColor,
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'Expert',
+                                  textAlign: TextAlign.center,
+                                  style: GoogleFonts.poppins(
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 13,
+                                    color: _selectedUserType == 'expert'
+                                        ? Colors.white
+                                        : textSecondaryColor,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ),
@@ -219,21 +280,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 Form(
                   key: _formKey,
                   child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Name input
-                      TextFormField(
+                      // Name field
+                      _buildInputLabel(
+                          _selectedUserType == 'expert' ? 'Full Name' : 'Name'),
+                      _buildInputField(
                         controller: _nameController,
-                        decoration: InputDecoration(
-                          labelText: _selectedUserType == 'expert'
-                              ? 'Full Name'
-                              : 'Name',
-                          prefixIcon: const Icon(Icons.person),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          filled: true,
-                          fillColor: Colors.grey[100],
-                        ),
+                        hintText: 'Enter your name',
+                        icon: Icons.person_outline,
                         validator: (value) {
                           if (value == null || value.isEmpty) {
                             return 'Please enter your name';
@@ -246,19 +301,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       // Email for expert
                       if (_selectedUserType == 'expert')
                         Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            TextFormField(
+                            _buildInputLabel('Email'),
+                            _buildInputField(
                               controller: _emailController,
+                              hintText: 'example@email.com',
+                              icon: Icons.email_outlined,
                               keyboardType: TextInputType.emailAddress,
-                              decoration: InputDecoration(
-                                labelText: 'Email',
-                                prefixIcon: const Icon(Icons.email),
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                filled: true,
-                                fillColor: Colors.grey[100],
-                              ),
                               validator: (value) {
                                 if (value == null || value.isEmpty) {
                                   return 'Please enter your email';
@@ -271,45 +321,99 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             ),
                             const SizedBox(height: 16),
 
-                            // Service Type Dropdown
+                            // Service Types Multiselect
                             if (_isLoadingServiceTypes)
                               const Center(
-                                child: CircularProgressIndicator(),
+                                child: Padding(
+                                  padding: EdgeInsets.symmetric(vertical: 20.0),
+                                  child: CircularProgressIndicator(),
+                                ),
                               )
                             else if (_serviceTypeError != null)
                               Text(
                                 _serviceTypeError!,
-                                style: const TextStyle(color: Colors.red),
+                                style: GoogleFonts.poppins(color: Colors.red),
                               )
                             else
-                              DropdownButtonFormField<int>(
-                                decoration: InputDecoration(
-                                  labelText: 'Service Type',
-                                  prefixIcon: const Icon(Icons.handyman),
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(10),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  _buildInputLabel('Service Types'),
+                                  Container(
+                                    decoration: BoxDecoration(
+                                      color: surfaceColor,
+                                      borderRadius: BorderRadius.circular(16),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black.withOpacity(0.03),
+                                          blurRadius: 10,
+                                          offset: const Offset(0, 5),
+                                        ),
+                                      ],
+                                    ),
+                                    padding: const EdgeInsets.all(8),
+                                    child: Column(
+                                      children: [
+                                        ..._serviceTypes.map((type) {
+                                          final isSelected =
+                                              _selectedServiceTypeIds.contains(
+                                                  type['service_type_id']);
+                                          return Theme(
+                                            data: Theme.of(context).copyWith(
+                                              checkboxTheme: CheckboxThemeData(
+                                                shape: RoundedRectangleBorder(
+                                                  borderRadius:
+                                                      BorderRadius.circular(4),
+                                                ),
+                                              ),
+                                            ),
+                                            child: CheckboxListTile(
+                                              title: Text(
+                                                type['name'] as String,
+                                                style: GoogleFonts.poppins(
+                                                  color: textPrimaryColor,
+                                                  fontSize: 14,
+                                                ),
+                                              ),
+                                              value: isSelected,
+                                              onChanged: (selected) {
+                                                setState(() {
+                                                  if (selected == true) {
+                                                    _selectedServiceTypeIds.add(
+                                                        type[
+                                                            'service_type_id']);
+                                                  } else {
+                                                    _selectedServiceTypeIds
+                                                        .remove(type[
+                                                            'service_type_id']);
+                                                  }
+                                                });
+                                              },
+                                              activeColor: primaryColor,
+                                              checkColor: Colors.white,
+                                              controlAffinity:
+                                                  ListTileControlAffinity
+                                                      .leading,
+                                              dense: true,
+                                              contentPadding: EdgeInsets.zero,
+                                            ),
+                                          );
+                                        }),
+                                        if (_selectedServiceTypeIds.isEmpty)
+                                          Padding(
+                                            padding: const EdgeInsets.all(8.0),
+                                            child: Text(
+                                              'Please select at least one service type',
+                                              style: GoogleFonts.poppins(
+                                                color: Colors.red,
+                                                fontSize: 12,
+                                              ),
+                                            ),
+                                          ),
+                                      ],
+                                    ),
                                   ),
-                                  filled: true,
-                                  fillColor: Colors.grey[100],
-                                ),
-                                value: _selectedServiceTypeId,
-                                items: _serviceTypes.map((type) {
-                                  return DropdownMenuItem<int>(
-                                    value: type['service_type_id'] as int,
-                                    child: Text(type['name'] as String),
-                                  );
-                                }).toList(),
-                                onChanged: (value) {
-                                  setState(() {
-                                    _selectedServiceTypeId = value;
-                                  });
-                                },
-                                validator: (value) {
-                                  if (value == null) {
-                                    return 'Please select a service type';
-                                  }
-                                  return null;
-                                },
+                                ],
                               ),
                             const SizedBox(height: 16),
                           ],
@@ -317,39 +421,32 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
                       // Phone for customer
                       if (_selectedUserType == 'customer')
-                        TextFormField(
-                          controller: _phoneController,
-                          keyboardType: TextInputType.phone,
-                          decoration: InputDecoration(
-                            labelText: 'Phone Number',
-                            prefixIcon: const Icon(Icons.phone),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(10),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _buildInputLabel('Phone Number'),
+                            _buildInputField(
+                              controller: _phoneController,
+                              hintText: '07xxxxxxxx',
+                              icon: Icons.phone_outlined,
+                              keyboardType: TextInputType.phone,
+                              validator: (value) {
+                                if (value == null || value.isEmpty) {
+                                  return 'Please enter your phone number';
+                                }
+                                return null;
+                              },
                             ),
-                            filled: true,
-                            fillColor: Colors.grey[100],
-                          ),
-                          validator: (value) {
-                            if (value == null || value.isEmpty) {
-                              return 'Please enter your phone number';
-                            }
-                            return null;
-                          },
+                            const SizedBox(height: 16),
+                          ],
                         ),
-                      const SizedBox(height: 16),
 
-                      // Address input
-                      TextFormField(
+                      // Address field
+                      _buildInputLabel('Address'),
+                      _buildInputField(
                         controller: _addressController,
-                        decoration: InputDecoration(
-                          labelText: 'Address',
-                          prefixIcon: const Icon(Icons.location_on),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          filled: true,
-                          fillColor: Colors.grey[100],
-                        ),
+                        hintText: 'Enter your address',
+                        icon: Icons.location_on_outlined,
                         validator: (value) {
                           if (value == null || value.isEmpty) {
                             return 'Please enter your address';
@@ -359,30 +456,25 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       ),
                       const SizedBox(height: 16),
 
-                      // Password input
-                      TextFormField(
+                      // Password field
+                      _buildInputLabel('Password'),
+                      _buildInputField(
                         controller: _passwordController,
+                        hintText: '••••••••',
+                        icon: Icons.lock_outline,
                         obscureText: _obscurePassword,
-                        decoration: InputDecoration(
-                          labelText: 'Password',
-                          prefixIcon: const Icon(Icons.lock),
-                          suffixIcon: IconButton(
-                            icon: Icon(
-                              _obscurePassword
-                                  ? Icons.visibility
-                                  : Icons.visibility_off,
-                            ),
-                            onPressed: () {
-                              setState(() {
-                                _obscurePassword = !_obscurePassword;
-                              });
-                            },
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            _obscurePassword
+                                ? Icons.visibility_outlined
+                                : Icons.visibility_off_outlined,
+                            color: primaryColor,
                           ),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          filled: true,
-                          fillColor: Colors.grey[100],
+                          onPressed: () {
+                            setState(() {
+                              _obscurePassword = !_obscurePassword;
+                            });
+                          },
                         ),
                         validator: (value) {
                           if (value == null || value.isEmpty) {
@@ -396,31 +488,26 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       ),
                       const SizedBox(height: 16),
 
-                      // Confirm Password input
-                      TextFormField(
+                      // Confirm Password field
+                      _buildInputLabel('Confirm Password'),
+                      _buildInputField(
                         controller: _confirmPasswordController,
+                        hintText: '••••••••',
+                        icon: Icons.lock_outline,
                         obscureText: _obscureConfirmPassword,
-                        decoration: InputDecoration(
-                          labelText: 'Confirm Password',
-                          prefixIcon: const Icon(Icons.lock),
-                          suffixIcon: IconButton(
-                            icon: Icon(
-                              _obscureConfirmPassword
-                                  ? Icons.visibility
-                                  : Icons.visibility_off,
-                            ),
-                            onPressed: () {
-                              setState(() {
-                                _obscureConfirmPassword =
-                                    !_obscureConfirmPassword;
-                              });
-                            },
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            _obscureConfirmPassword
+                                ? Icons.visibility_outlined
+                                : Icons.visibility_off_outlined,
+                            color: primaryColor,
                           ),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          filled: true,
-                          fillColor: Colors.grey[100],
+                          onPressed: () {
+                            setState(() {
+                              _obscureConfirmPassword =
+                                  !_obscureConfirmPassword;
+                            });
+                          },
                         ),
                         validator: (value) {
                           if (value == null || value.isEmpty) {
@@ -434,29 +521,73 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       ),
                       const SizedBox(height: 24),
 
+                      // Error message
+                      if (authProvider.error != null)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              vertical: 12, horizontal: 16),
+                          margin: const EdgeInsets.only(bottom: 16),
+                          decoration: BoxDecoration(
+                            color: Colors.red.shade50,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.red.shade200),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(Icons.error_outline,
+                                  color: Colors.red.shade800, size: 20),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  authProvider.error!,
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 13,
+                                    color: Colors.red.shade800,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+
                       // Register Button
-                      SizedBox(
+                      Container(
                         width: double.infinity,
-                        height: 50,
+                        height: 55,
+                        margin: const EdgeInsets.only(top: 8),
+                        decoration: BoxDecoration(
+                          boxShadow: [
+                            BoxShadow(
+                              color: accentColor.withOpacity(0.3),
+                              blurRadius: 15,
+                              offset: const Offset(0, 8),
+                            ),
+                          ],
+                        ),
                         child: ElevatedButton(
                           onPressed: authProvider.isLoading ? null : _register,
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.blue,
+                            backgroundColor: accentColor,
                             foregroundColor: Colors.white,
+                            elevation: 0,
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
+                              borderRadius: BorderRadius.circular(16),
                             ),
-                            elevation: 2,
                           ),
                           child: authProvider.isLoading
-                              ? const CircularProgressIndicator(
-                                  color: Colors.white,
+                              ? SizedBox(
+                                  height: 24,
+                                  width: 24,
+                                  child: CircularProgressIndicator(
+                                    color: Colors.white,
+                                    strokeWidth: 2,
+                                  ),
                                 )
                               : Text(
-                                  'Register as ${_selectedUserType == 'expert' ? 'Expert' : 'Customer'}',
-                                  style: const TextStyle(
+                                  'Register',
+                                  style: GoogleFonts.poppins(
                                     fontSize: 16,
-                                    fontWeight: FontWeight.bold,
+                                    fontWeight: FontWeight.w600,
                                   ),
                                 ),
                         ),
@@ -467,7 +598,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const Text("Already have an account?"),
+                          Text(
+                            "Already have an account?",
+                            style: GoogleFonts.poppins(
+                              color: textSecondaryColor,
+                              fontSize: 14,
+                            ),
+                          ),
                           TextButton(
                             onPressed: () {
                               Navigator.pushReplacementNamed(
@@ -476,11 +613,18 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 arguments: _selectedUserType,
                               );
                             },
-                            child: const Text(
+                            style: TextButton.styleFrom(
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 8),
+                              minimumSize: Size.zero,
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            ),
+                            child: Text(
                               'Login Now',
-                              style: TextStyle(
-                                color: Colors.blue,
-                                fontWeight: FontWeight.bold,
+                              style: GoogleFonts.poppins(
+                                color: accentColor,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 14,
                               ),
                             ),
                           ),
@@ -493,6 +637,68 @@ class _RegisterScreenState extends State<RegisterScreen> {
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildInputLabel(String label) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8.0),
+      child: Text(
+        label,
+        style: GoogleFonts.poppins(
+          fontSize: 14,
+          fontWeight: FontWeight.w500,
+          color: textPrimaryColor,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInputField({
+    required TextEditingController controller,
+    required String hintText,
+    required IconData icon,
+    TextInputType keyboardType = TextInputType.text,
+    bool obscureText = false,
+    Widget? suffixIcon,
+    required String? Function(String?) validator,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: surfaceColor,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: TextFormField(
+        controller: controller,
+        keyboardType: keyboardType,
+        obscureText: obscureText,
+        style: GoogleFonts.poppins(
+          color: textPrimaryColor,
+          fontSize: 14,
+        ),
+        decoration: InputDecoration(
+          hintText: hintText,
+          hintStyle: GoogleFonts.poppins(
+            color: Colors.grey,
+            fontSize: 14,
+          ),
+          prefixIcon: Icon(icon, color: primaryColor),
+          suffixIcon: suffixIcon,
+          border: InputBorder.none,
+          contentPadding: const EdgeInsets.symmetric(
+            vertical: 16,
+            horizontal: 20,
+          ),
+        ),
+        validator: validator,
       ),
     );
   }

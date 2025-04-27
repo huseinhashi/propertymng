@@ -23,10 +23,6 @@ const Expert = sequelize.define("expert", {
     type: DataTypes.STRING,
     allowNull: false,
   },
-  service_type_id: {
-    type: DataTypes.INTEGER,
-    allowNull: false,
-  },
   address: {
     type: DataTypes.STRING,
   },

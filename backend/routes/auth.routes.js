@@ -17,9 +17,14 @@ const validateExpertRegistration = [
   body("password")
     .isLength({ min: 6 })
     .withMessage("Password must be at least 6 characters"),
-  body("service_type_id")
+  body("service_type_ids")
+    .isArray()
+    .withMessage("Service type IDs must be an array")
+    .notEmpty()
+    .withMessage("At least one service type ID is required"),
+  body("service_type_ids.*")
     .isInt()
-    .withMessage("Service type ID must be an integer"),
+    .withMessage("Each service type ID must be an integer"),
   body("address").notEmpty().withMessage("Address is required"),
 ];
 

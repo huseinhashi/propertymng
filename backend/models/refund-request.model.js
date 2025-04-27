@@ -7,6 +7,14 @@ const RefundRequest = sequelize.define("refund_request", {
     primaryKey: true,
     autoIncrement: true,
   },
+  service_order_id: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+  },
+  amount: {
+    type: DataTypes.DECIMAL(10, 2),
+    allowNull: false,
+  },
   reason: {
     type: DataTypes.TEXT,
     allowNull: false,
@@ -14,6 +22,12 @@ const RefundRequest = sequelize.define("refund_request", {
   status: {
     type: DataTypes.ENUM("requested", "approved", "rejected"),
     defaultValue: "requested",
+  },
+  decision_notes: {
+    type: DataTypes.TEXT,
+  },
+  decided_at: {
+    type: DataTypes.DATE,
   },
 });
 

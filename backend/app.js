@@ -8,8 +8,15 @@ import authRouter from "./routes/auth.routes.js";
 import serviceTypeRoutes from "./routes/service-type.routes.js";
 // import seed from "./database/seed.js";
 import adminRouter from "./routes/admin.routes.js";
+import customerRouter from "./routes/customer.routes.js";
+import expertRouter from "./routes/expert.routes.js";
+import { fileURLToPath } from "url";
+import path from "path";
 
 import errorMiddleware from "./middlewares/error.middleware.js";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 
@@ -29,12 +36,18 @@ app.use((req, res, next) => {
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
+
+// Serve static files from uploads directory
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+
 app.get("/test", (req, res) => {
   res.json({ status: "ok" });
 });
 app.use("/api/v1/auth", authRouter);
 app.use("/api/v1/service-types", serviceTypeRoutes);
 app.use("/api/v1/admin", adminRouter);
+app.use("/api/v1/customer", customerRouter);
+app.use("/api/v1/expert", expertRouter);
 
 app.use(errorMiddleware);
 
