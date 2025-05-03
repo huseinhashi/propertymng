@@ -269,112 +269,112 @@ class _HistoryTabState extends State<HistoryTab> {
                                         maxLines: 2,
                                         overflow: TextOverflow.ellipsis,
                                       ),
-                                      const SizedBox(height: 16),
-                                      Row(
-                                        children: [
-                                          Icon(
-                                            Icons.location_on_outlined,
-                                            size: 16,
-                                            color: textSecondaryColor,
-                                          ),
-                                          const SizedBox(width: 4),
-                                          Expanded(
-                                            child: Text(
-                                              request['location'] ??
-                                                  'No location',
-                                              style: GoogleFonts.poppins(
-                                                fontSize: 12,
-                                                color: textSecondaryColor,
-                                              ),
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                      const SizedBox(height: 8),
-                                      Row(
-                                        children: [
-                                          Icon(
-                                            Icons.calendar_today_outlined,
-                                            size: 16,
-                                            color: textSecondaryColor,
-                                          ),
-                                          const SizedBox(width: 4),
-                                          Text(
-                                            'Created on $createdAt',
-                                            style: GoogleFonts.poppins(
-                                              fontSize: 12,
-                                              color: textSecondaryColor,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
+                                      // const SizedBox(height: 16),
+                                      // Row(
+                                      //   children: [
+                                      //     Icon(
+                                      //       Icons.location_on_outlined,
+                                      //       size: 16,
+                                      //       color: textSecondaryColor,
+                                      //     ),
+                                      //     const SizedBox(width: 4),
+                                      //     Expanded(
+                                      //       child: Text(
+                                      //         request['location'] ??
+                                      //             'No location',
+                                      //         style: GoogleFonts.poppins(
+                                      //           fontSize: 12,
+                                      //           color: textSecondaryColor,
+                                      //         ),
+                                      //         maxLines: 1,
+                                      //         overflow: TextOverflow.ellipsis,
+                                      //       ),
+                                      //     ),
+                                      //   ],
+                                      // ),
+                                      // const SizedBox(height: 8),
+                                      // Row(
+                                      //   children: [
+                                      //     Icon(
+                                      //       Icons.calendar_today_outlined,
+                                      //       size: 16,
+                                      //       color: textSecondaryColor,
+                                      //     ),
+                                      //     const SizedBox(width: 4),
+                                      //     Text(
+                                      //       'Created on $createdAt',
+                                      //       style: GoogleFonts.poppins(
+                                      //         fontSize: 12,
+                                      //         color: textSecondaryColor,
+                                      //       ),
+                                      //     ),
+                                      //   ],
+                                      // ),
 
-                                      // Service type if available
-                                      if (request['service_type'] != null)
-                                        Padding(
-                                          padding:
-                                              const EdgeInsets.only(top: 8.0),
-                                          child: Row(
-                                            children: [
-                                              Icon(
-                                                Icons.category_outlined,
-                                                size: 16,
-                                                color: textSecondaryColor,
-                                              ),
-                                              const SizedBox(width: 4),
-                                              Container(
-                                                padding:
-                                                    const EdgeInsets.symmetric(
-                                                        horizontal: 8,
-                                                        vertical: 4),
-                                                decoration: BoxDecoration(
-                                                  color: primaryColor
-                                                      .withOpacity(0.1),
-                                                  borderRadius:
-                                                      BorderRadius.circular(8),
-                                                ),
-                                                child: Text(
-                                                  request['service_type']
-                                                          ['name'] ??
-                                                      'Unknown',
-                                                  style: GoogleFonts.poppins(
-                                                    fontSize: 12,
-                                                    fontWeight: FontWeight.w500,
-                                                    color: primaryColor,
-                                                  ),
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
+                                      // // Service type if available
+                                      // if (request['service_type'] != null)
+                                      //   Padding(
+                                      //     padding:
+                                      //         const EdgeInsets.only(top: 8.0),
+                                      //     child: Row(
+                                      //       children: [
+                                      //         Icon(
+                                      //           Icons.category_outlined,
+                                      //           size: 16,
+                                      //           color: textSecondaryColor,
+                                      //         ),
+                                      //         const SizedBox(width: 4),
+                                      //         Container(
+                                      //           padding:
+                                      //               const EdgeInsets.symmetric(
+                                      //                   horizontal: 8,
+                                      //                   vertical: 4),
+                                      //           decoration: BoxDecoration(
+                                      //             color: primaryColor
+                                      //                 .withOpacity(0.1),
+                                      //             borderRadius:
+                                      //                 BorderRadius.circular(8),
+                                      //           ),
+                                      //           child: Text(
+                                      //             request['service_type']
+                                      //                     ['name'] ??
+                                      //                 'Unknown',
+                                      //             style: GoogleFonts.poppins(
+                                      //               fontSize: 12,
+                                      //               fontWeight: FontWeight.w500,
+                                      //               color: primaryColor,
+                                      //             ),
+                                      //           ),
+                                      //         ),
+                                      //       ],
+                                      //     ),
+                                      //   ),
 
-                                      // Bid information if any
-                                      if (request['bids'] != null &&
-                                          (request['bids'] as List).isNotEmpty)
-                                        Padding(
-                                          padding:
-                                              const EdgeInsets.only(top: 8.0),
-                                          child: Row(
-                                            children: [
-                                              Icon(
-                                                Icons.handshake_outlined,
-                                                size: 16,
-                                                color: accentColor,
-                                              ),
-                                              const SizedBox(width: 4),
-                                              Text(
-                                                "${(request['bids'] as List).length} bid(s) received",
-                                                style: GoogleFonts.poppins(
-                                                  fontSize: 12,
-                                                  fontWeight: FontWeight.w500,
-                                                  color: accentColor,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
+                                      // // Bid information if any
+                                      // if (request['bids'] != null &&
+                                      //     (request['bids'] as List).isNotEmpty)
+                                      //   Padding(
+                                      //     padding:
+                                      //         const EdgeInsets.only(top: 8.0),
+                                      //     child: Row(
+                                      //       children: [
+                                      //         Icon(
+                                      //           Icons.handshake_outlined,
+                                      //           size: 16,
+                                      //           color: accentColor,
+                                      //         ),
+                                      //         const SizedBox(width: 4),
+                                      //         Text(
+                                      //           "${(request['bids'] as List).length} bid(s) received",
+                                      //           style: GoogleFonts.poppins(
+                                      //             fontSize: 12,
+                                      //             fontWeight: FontWeight.w500,
+                                      //             color: accentColor,
+                                      //           ),
+                                      //         ),
+                                      //       ],
+                                      //     ),
+                                      //   ),
                                     ],
                                   ),
                                 ),

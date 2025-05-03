@@ -16,6 +16,7 @@ class RepairService {
   Future<Map<String, dynamic>> createRepairRequest({
     required String description,
     required String location,
+    required int serviceTypeId,
     required List<String> imagePaths,
   }) async {
     try {
@@ -23,6 +24,7 @@ class RepairService {
         print('📝 Creating repair request with:');
         print('📄 Description: $description');
         print('📍 Location: $location');
+        print('🔧 Service Type ID: $serviceTypeId');
         print('🖼️ Images count: ${imagePaths.length}');
       }
 
@@ -30,7 +32,7 @@ class RepairService {
       final imageFiles = imagePaths.map((path) {
         final filename = path.split('/').last;
         return {
-          'field': 'images', // Make sure this matches what your backend expects
+          'field': 'images',
           'path': path,
           'filename': filename,
         };
@@ -42,6 +44,7 @@ class RepairService {
         data: {
           'description': description,
           'location': location,
+          'service_type_id': serviceTypeId,
         },
         files: imageFiles,
       );

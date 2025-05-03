@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:app/services/repair_service.dart';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
+import 'package:app/services/api_client.dart';
 
 class RepairRequestScreen extends StatefulWidget {
   const RepairRequestScreen({Key? key}) : super(key: key);
@@ -20,6 +21,54 @@ class _RepairRequestScreenState extends State<RepairRequestScreen> {
   final ImagePicker _picker = ImagePicker();
   bool _isLoading = false;
   String? _errorMessage;
+  List<Map<String, dynamic>> _serviceTypes = [];
+  bool _isLoadingServiceTypes = false;
+  String? _serviceTypeError;
+  bool _showAllServices = false;
+  int? _selectedServiceTypeId;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchServiceTypes();
+  }
+
+  Future<void> _fetchServiceTypes() async {
+    setState(() {
+      _isLoadingServiceTypes = true;
+      _serviceTypeError = null;
+    });
+
+    try {
+      final response = await ApiClient().request(
+        method: 'GET',
+        path: '/service-types',
+      );
+
+      if (response['success']) {
+        setState(() {
+          _serviceTypes = List<Map<String, dynamic>>.from(response['data']);
+          if (_serviceTypes.isNotEmpty) {
+            _selectedServiceTypeId =
+                _serviceTypes.first['service_type_id'] as int;
+          }
+        });
+      } else {
+        setState(() {
+          _serviceTypeError =
+              response['message'] ?? 'Failed to load service types';
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _serviceTypeError = 'Error fetching service types: $e';
+      });
+    } finally {
+      setState(() {
+        _isLoadingServiceTypes = false;
+      });
+    }
+  }
 
   @override
   void dispose() {
@@ -72,6 +121,16 @@ class _RepairRequestScreenState extends State<RepairRequestScreen> {
 
   Future<void> _submitRequest() async {
     if (_formKey.currentState!.validate()) {
+      if (_selectedServiceTypeId == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please select a service type'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+
       setState(() {
         _isLoading = true;
         _errorMessage = null;
@@ -80,19 +139,10 @@ class _RepairRequestScreenState extends State<RepairRequestScreen> {
       try {
         final repairService = RepairService();
 
-        // Prepare image files for upload
-        List<Map<String, dynamic>> images = [];
-        for (var image in _selectedImages) {
-          images.add({
-            'field': 'images',
-            'path': image.path,
-            'filename': image.name,
-          });
-        }
-
         final response = await repairService.createRepairRequest(
           description: _descriptionController.text.trim(),
           location: _locationController.text.trim(),
+          serviceTypeId: _selectedServiceTypeId!,
           imagePaths: _selectedImages.map((image) => image.path).toList(),
         );
 
@@ -109,7 +159,7 @@ class _RepairRequestScreenState extends State<RepairRequestScreen> {
                 backgroundColor: Colors.green,
               ),
             );
-            Navigator.pop(context, true); // Return true to indicate success
+            Navigator.pop(context, true);
           }
         } else {
           setState(() {
@@ -152,6 +202,97 @@ class _RepairRequestScreenState extends State<RepairRequestScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // Service Type Selection
+                Text(
+                  'Service Type',
+                  style: GoogleFonts.poppins(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: textPrimaryColor,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                if (_isLoadingServiceTypes)
+                  const Center(
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(vertical: 20.0),
+                      child: CircularProgressIndicator(),
+                    ),
+                  )
+                else if (_serviceTypeError != null)
+                  Text(
+                    _serviceTypeError!,
+                    style: GoogleFonts.poppins(color: Colors.red),
+                  )
+                else
+                  Container(
+                    decoration: BoxDecoration(
+                      color: surfaceColor,
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.03),
+                          blurRadius: 10,
+                          offset: const Offset(0, 5),
+                        ),
+                      ],
+                    ),
+                    padding: const EdgeInsets.all(8),
+                    child: Column(
+                      children: [
+                        ...(_showAllServices
+                                ? _serviceTypes
+                                : _serviceTypes.take(4))
+                            .map((type) {
+                          final isSelected =
+                              _selectedServiceTypeId == type['service_type_id'];
+                          return Theme(
+                            data: Theme.of(context).copyWith(
+                              radioTheme: RadioThemeData(
+                                fillColor:
+                                    MaterialStateProperty.all(primaryColor),
+                              ),
+                            ),
+                            child: RadioListTile(
+                              title: Text(
+                                type['name'] as String,
+                                style: GoogleFonts.poppins(
+                                  color: textPrimaryColor,
+                                  fontSize: 14,
+                                ),
+                              ),
+                              value: type['service_type_id'] as int,
+                              groupValue: _selectedServiceTypeId,
+                              onChanged: (value) {
+                                setState(() {
+                                  _selectedServiceTypeId = value as int;
+                                });
+                              },
+                              dense: true,
+                              contentPadding: EdgeInsets.zero,
+                            ),
+                          );
+                        }),
+                        if (_serviceTypes.length > 4)
+                          TextButton(
+                            onPressed: () {
+                              setState(() {
+                                _showAllServices = !_showAllServices;
+                              });
+                            },
+                            child: Text(
+                              _showAllServices ? 'Show Less' : 'Show More',
+                              style: GoogleFonts.poppins(
+                                color: primaryColor,
+                                fontSize: 14,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                const SizedBox(height: 24),
+
                 // Description label
                 Text(
                   'Description',
@@ -195,6 +336,9 @@ class _RepairRequestScreenState extends State<RepairRequestScreen> {
                     validator: (value) {
                       if (value == null || value.isEmpty) {
                         return 'Please describe the issue';
+                      }
+                      if (value.length < 10) {
+                        return 'Description must be at least 10 characters';
                       }
                       return null;
                     },
@@ -251,6 +395,9 @@ class _RepairRequestScreenState extends State<RepairRequestScreen> {
                     validator: (value) {
                       if (value == null || value.isEmpty) {
                         return 'Please enter the location';
+                      }
+                      if (value.length < 5) {
+                        return 'Location must be at least 5 characters';
                       }
                       return null;
                     },

@@ -18,13 +18,38 @@ export const createRepairRequest = async (req, res, next) => {
   const transaction = await sequelize.transaction();
 
   try {
-    const { description, location } = req.body;
+    const { description, location, service_type_id } = req.body;
 
     // Validate required fields
-    if (!description || !location) {
+    if (!description || !location || !service_type_id) {
       return res.status(400).json({
         success: false,
-        message: "Description and location are required",
+        message: "Description, location, and service type are required",
+      });
+    }
+
+    // Validate description length
+    if (description.length < 10) {
+      return res.status(400).json({
+        success: false,
+        message: "Description must be at least 10 characters",
+      });
+    }
+
+    // Validate location length
+    if (location.length < 5) {
+      return res.status(400).json({
+        success: false,
+        message: "Location must be at least 5 characters",
+      });
+    }
+
+    // Validate service type exists
+    const serviceType = await ServiceType.findByPk(service_type_id);
+    if (!serviceType) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid service type",
       });
     }
 
@@ -44,8 +69,7 @@ export const createRepairRequest = async (req, res, next) => {
         customer_id: customerId,
         description,
         location,
-        // service_type_id will be set by admin later
-        service_type_id: null,
+        service_type_id,
         status: "pending",
       },
       { transaction }
