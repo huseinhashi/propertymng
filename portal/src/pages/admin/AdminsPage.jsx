@@ -8,6 +8,7 @@ import { DataTable } from "@/components/ui/data-table";
 import { Pencil, Trash2, Plus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import api from "@/lib/axios";
+import { cn } from "@/lib/utils";
 
 export const AdminsPage = () => {
   const [admins, setAdmins] = useState([]);
@@ -23,6 +24,7 @@ export const AdminsPage = () => {
     email: "",
     password: "",
   });
+  const [errors, setErrors] = useState({});
   const { toast } = useToast();
 
   const columns = [
@@ -130,13 +132,65 @@ export const AdminsPage = () => {
     }));
   };
 
+  const validateForm = () => {
+    const newErrors = {};
+    let isValid = true;
+
+    if (!formData.name) {
+      newErrors.name = "Name is required";
+      isValid = false;
+    } else if (!/^[a-zA-Z\s]+$/.test(formData.name)) {
+      newErrors.name = "Name can only contain letters and spaces";
+      isValid = false;
+    }
+
+    if (!formData.email) {
+      newErrors.email = "Email is required";
+      isValid = false;
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      newErrors.email = "Please enter a valid email address";
+      isValid = false;
+    }
+
+    if (!selectedAdmin) {
+      if (!formData.password) {
+        newErrors.password = "Password is required";
+        isValid = false;
+      } else {
+        if (formData.password.length < 8) {
+          newErrors.password = "Password must be at least 8 characters";
+          isValid = false;
+        }
+        if (!/[A-Z]/.test(formData.password)) {
+          newErrors.password = "Password must contain at least one uppercase letter";
+          isValid = false;
+        }
+        if (!/[a-z]/.test(formData.password)) {
+          newErrors.password = "Password must contain at least one lowercase letter";
+          isValid = false;
+        }
+        if (!/[0-9]/.test(formData.password)) {
+          newErrors.password = "Password must contain at least one number";
+          isValid = false;
+        }
+        if (!/[!@#$%^&*(),.?":{}|<>]/.test(formData.password)) {
+          newErrors.password = "Password must contain at least one special character";
+          isValid = false;
+        }
+      }
+    }
+
+    setErrors(newErrors);
+    return isValid;
+  };
+
   const handleAdd = async (e) => {
     e.preventDefault();
-    if (!validateForm() || !formData.password) {
+    if (!validateForm()) {
       toast({
         variant: "destructive",
         title: "Validation Error",
-        description: "Password is required for new admins",
+        description: "Please fix the errors in the form",
       });
       return;
     }
@@ -164,7 +218,14 @@ export const AdminsPage = () => {
 
   const handleEdit = async (e) => {
     e.preventDefault();
-    if (!validateForm()) return;
+    if (!validateForm()) {
+      toast({
+        variant: "destructive",
+        title: "Validation Error",
+        description: "Please fix the errors in the form",
+      });
+      return;
+    }
 
     try {
       const response = await api.patch(
@@ -224,18 +285,6 @@ export const AdminsPage = () => {
     }
   };
 
-  const validateForm = () => {
-    if (!formData.name || !formData.email) {
-      toast({
-        variant: "destructive",
-        title: "Validation Error",
-        description: "Name and email are required",
-      });
-      return false;
-    }
-    return true;
-  };
-
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
@@ -264,34 +313,67 @@ export const AdminsPage = () => {
           </DialogHeader>
           <form onSubmit={handleAdd} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="name">Name</Label>
+              <Label htmlFor="name" className={cn(errors.name && "text-destructive")}>
+                Name *
+              </Label>
               <Input
                 id="name"
                 name="name"
                 value={formData.name}
                 onChange={handleInputChange}
+                placeholder="Enter admin name"
+                className={cn(errors.name && "border-destructive focus-visible:ring-destructive")}
               />
+              {errors.name && (
+                <p className="text-sm text-destructive">{errors.name}</p>
+              )}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email" className={cn(errors.email && "text-destructive")}>
+                Email *
+              </Label>
               <Input
                 id="email"
                 name="email"
                 value={formData.email}
                 onChange={handleInputChange}
+                placeholder="Enter admin email"
+                className={cn(errors.email && "border-destructive focus-visible:ring-destructive")}
               />
+              {errors.email && (
+                <p className="text-sm text-destructive">{errors.email}</p>
+              )}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password" className={cn(errors.password && "text-destructive")}>
+                Password *
+              </Label>
               <Input
                 id="password"
                 name="password"
                 type="password"
                 value={formData.password}
                 onChange={handleInputChange}
+                placeholder="Enter password"
+                className={cn(errors.password && "border-destructive focus-visible:ring-destructive")}
               />
+              {errors.password && (
+                <p className="text-sm text-destructive">{errors.password}</p>
+              )}
             </div>
-            <Button type="submit">Add Admin</Button>
+            <div className="flex justify-end gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setIsAddDialogOpen(false);
+                  setErrors({});
+                }}
+              >
+                Cancel
+              </Button>
+              <Button type="submit">Add Admin</Button>
+            </div>
           </form>
         </DialogContent>
       </Dialog>
@@ -304,24 +386,67 @@ export const AdminsPage = () => {
           </DialogHeader>
           <form onSubmit={handleEdit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="name">Name</Label>
+              <Label htmlFor="edit-name" className={cn(errors.name && "text-destructive")}>
+                Name *
+              </Label>
               <Input
-                id="name"
+                id="edit-name"
                 name="name"
                 value={formData.name}
                 onChange={handleInputChange}
+                placeholder="Enter admin name"
+                className={cn(errors.name && "border-destructive focus-visible:ring-destructive")}
               />
+              {errors.name && (
+                <p className="text-sm text-destructive">{errors.name}</p>
+              )}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="edit-email" className={cn(errors.email && "text-destructive")}>
+                Email *
+              </Label>
               <Input
-                id="email"
+                id="edit-email"
                 name="email"
                 value={formData.email}
                 onChange={handleInputChange}
+                placeholder="Enter admin email"
+                className={cn(errors.email && "border-destructive focus-visible:ring-destructive")}
               />
+              {errors.email && (
+                <p className="text-sm text-destructive">{errors.email}</p>
+              )}
             </div>
-            <Button type="submit">Update Admin</Button>
+            <div className="space-y-2">
+              <Label htmlFor="edit-password" className={cn(errors.password && "text-destructive")}>
+                Password (leave blank to keep unchanged)
+              </Label>
+              <Input
+                id="edit-password"
+                name="password"
+                type="password"
+                value={formData.password}
+                onChange={handleInputChange}
+                placeholder="Enter new password"
+                className={cn(errors.password && "border-destructive focus-visible:ring-destructive")}
+              />
+              {errors.password && (
+                <p className="text-sm text-destructive">{errors.password}</p>
+              )}
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setIsEditDialogOpen(false);
+                  setErrors({});
+                }}
+              >
+                Cancel
+              </Button>
+              <Button type="submit">Update Admin</Button>
+            </div>
           </form>
         </DialogContent>
       </Dialog>

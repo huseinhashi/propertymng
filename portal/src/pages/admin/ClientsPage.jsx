@@ -8,6 +8,7 @@ import { DataTable } from "@/components/ui/data-table";
 import { Pencil, Trash2, Plus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import api from "@/lib/axios";
+import { cn } from "@/lib/utils";
 
 export const ClientsPage = () => {
   const [clients, setClients] = useState([]);
@@ -25,6 +26,7 @@ export const ClientsPage = () => {
     password: "",
   });
   const { toast } = useToast();
+  const [errors, setErrors] = useState({});
 
   const columns = [
     {
@@ -138,13 +140,90 @@ export const ClientsPage = () => {
     }));
   };
 
+  const handlePhoneChange = (e) => {
+    const value = e.target.value;
+    // Only allow numbers
+    if (!/^\d*$/.test(value)) return;
+    
+    // If value starts with 252, don't allow removing it
+    if (value.startsWith('252') && value.length < 3) return;
+    
+    // If value doesn't start with 252, add it
+    if (!value.startsWith('252')) {
+      setFormData(prev => ({ ...prev, phone: '252' + value }));
+      return;
+    }
+    
+    // Limit to 12 characters (252 + 9 digits)
+    if (value.length > 12) return;
+    
+    setFormData(prev => ({ ...prev, phone: value }));
+  };
+
+  const validateForm = () => {
+    const newErrors = {};
+    let isValid = true;
+
+    if (!formData.name) {
+      newErrors.name = "Name is required";
+      isValid = false;
+    } else if (!/^[a-zA-Z\s]+$/.test(formData.name)) {
+      newErrors.name = "Name can only contain letters and spaces";
+      isValid = false;
+    }
+
+    if (!formData.phone) {
+      newErrors.phone = "Phone is required";
+      isValid = false;
+    } else if (!/^252[0-9]{9}$/.test(formData.phone)) {
+      newErrors.phone = "Phone number must start with 252 followed by 9 digits";
+      isValid = false;
+    }
+
+    if (!formData.address) {
+      newErrors.address = "Address is required";
+      isValid = false;
+    }
+
+    if (!selectedClient) {
+      if (!formData.password) {
+        newErrors.password = "Password is required";
+        isValid = false;
+      } else {
+        if (formData.password.length < 8) {
+          newErrors.password = "Password must be at least 8 characters";
+          isValid = false;
+        }
+        if (!/[A-Z]/.test(formData.password)) {
+          newErrors.password = "Password must contain at least one uppercase letter";
+          isValid = false;
+        }
+        if (!/[a-z]/.test(formData.password)) {
+          newErrors.password = "Password must contain at least one lowercase letter";
+          isValid = false;
+        }
+        if (!/[0-9]/.test(formData.password)) {
+          newErrors.password = "Password must contain at least one number";
+          isValid = false;
+        }
+        if (!/[!@#$%^&*(),.?":{}|<>]/.test(formData.password)) {
+          newErrors.password = "Password must contain at least one special character";
+          isValid = false;
+        }
+      }
+    }
+
+    setErrors(newErrors);
+    return isValid;
+  };
+
   const handleAdd = async (e) => {
     e.preventDefault();
-    if (!validateForm() || !formData.password) {
+    if (!validateForm()) {
       toast({
         variant: "destructive",
         title: "Validation Error",
-        description: "Password is required for new customers",
+        description: "Please fix the errors in the form",
       });
       return;
     }
@@ -172,7 +251,14 @@ export const ClientsPage = () => {
 
   const handleEdit = async (e) => {
     e.preventDefault();
-    if (!validateForm()) return;
+    if (!validateForm()) {
+      toast({
+        variant: "destructive",
+        title: "Validation Error",
+        description: "Please fix the errors in the form",
+      });
+      return;
+    }
 
     try {
       const response = await api.patch(
@@ -232,18 +318,6 @@ export const ClientsPage = () => {
     }
   };
 
-  const validateForm = () => {
-    if (!formData.name || !formData.phone || !formData.address) {
-      toast({
-        variant: "destructive",
-        title: "Validation Error",
-        description: "All fields except password are required",
-      });
-      return false;
-    }
-    return true;
-  };
-
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
@@ -268,55 +342,87 @@ export const ClientsPage = () => {
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Add New Customer</DialogTitle>
+            <DialogTitle>Add New Client</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleAdd} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="name">Name</Label>
+              <Label htmlFor="name" className={cn(errors.name && "text-destructive")}>
+                Name *
+              </Label>
               <Input
                 id="name"
                 name="name"
                 value={formData.name}
                 onChange={handleInputChange}
+                placeholder="Enter client name"
+                className={cn(errors.name && "border-destructive focus-visible:ring-destructive")}
               />
+              {errors.name && (
+                <p className="text-sm text-destructive">{errors.name}</p>
+              )}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="phone">Phone</Label>
+              <Label htmlFor="phone" className={cn(errors.phone && "text-destructive")}>
+                Phone *
+              </Label>
               <Input
                 id="phone"
                 name="phone"
                 value={formData.phone}
-                onChange={handleInputChange}
+                onChange={handlePhoneChange}
+                placeholder="252xxxxxxxxx"
+                maxLength={12}
+                className={cn(errors.phone && "border-destructive focus-visible:ring-destructive")}
               />
+              {errors.phone && (
+                <p className="text-sm text-destructive">{errors.phone}</p>
+              )}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="address">Address</Label>
+              <Label htmlFor="address" className={cn(errors.address && "text-destructive")}>
+                Address *
+              </Label>
               <Input
                 id="address"
                 name="address"
                 value={formData.address}
                 onChange={handleInputChange}
+                placeholder="Enter client address"
+                className={cn(errors.address && "border-destructive focus-visible:ring-destructive")}
               />
+              {errors.address && (
+                <p className="text-sm text-destructive">{errors.address}</p>
+              )}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password" className={cn(errors.password && "text-destructive")}>
+                Password *
+              </Label>
               <Input
                 id="password"
                 name="password"
                 type="password"
                 value={formData.password}
                 onChange={handleInputChange}
+                placeholder="Enter password"
+                className={cn(errors.password && "border-destructive focus-visible:ring-destructive")}
               />
+              {errors.password && (
+                <p className="text-sm text-destructive">{errors.password}</p>
+              )}
             </div>
             <div className="flex justify-end gap-2">
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => setIsAddDialogOpen(false)}
+                onClick={() => {
+                  setIsAddDialogOpen(false);
+                  setErrors({});
+                }}
               >
                 Cancel
               </Button>
-              <Button type="submit">Add Customer</Button>
+              <Button type="submit">Add Client</Button>
             </div>
           </form>
         </DialogContent>
@@ -326,38 +432,60 @@ export const ClientsPage = () => {
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Edit Customer</DialogTitle>
+            <DialogTitle>Edit Client</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleEdit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="edit-name">Name</Label>
+              <Label htmlFor="edit-name" className={cn(errors.name && "text-destructive")}>
+                Name *
+              </Label>
               <Input
                 id="edit-name"
                 name="name"
                 value={formData.name}
                 onChange={handleInputChange}
+                placeholder="Enter client name"
+                className={cn(errors.name && "border-destructive focus-visible:ring-destructive")}
               />
+              {errors.name && (
+                <p className="text-sm text-destructive">{errors.name}</p>
+              )}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="edit-phone">Phone</Label>
+              <Label htmlFor="edit-phone" className={cn(errors.phone && "text-destructive")}>
+                Phone *
+              </Label>
               <Input
                 id="edit-phone"
                 name="phone"
                 value={formData.phone}
-                onChange={handleInputChange}
+                onChange={handlePhoneChange}
+                placeholder="252xxxxxxxxx"
+                maxLength={12}
+                className={cn(errors.phone && "border-destructive focus-visible:ring-destructive")}
               />
+              {errors.phone && (
+                <p className="text-sm text-destructive">{errors.phone}</p>
+              )}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="edit-address">Address</Label>
+              <Label htmlFor="edit-address" className={cn(errors.address && "text-destructive")}>
+                Address *
+              </Label>
               <Input
                 id="edit-address"
                 name="address"
                 value={formData.address}
                 onChange={handleInputChange}
+                placeholder="Enter client address"
+                className={cn(errors.address && "border-destructive focus-visible:ring-destructive")}
               />
+              {errors.address && (
+                <p className="text-sm text-destructive">{errors.address}</p>
+              )}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="edit-password">
+              <Label htmlFor="edit-password" className={cn(errors.password && "text-destructive")}>
                 Password (leave blank to keep unchanged)
               </Label>
               <Input
@@ -366,17 +494,25 @@ export const ClientsPage = () => {
                 type="password"
                 value={formData.password}
                 onChange={handleInputChange}
+                placeholder="Enter new password"
+                className={cn(errors.password && "border-destructive focus-visible:ring-destructive")}
               />
+              {errors.password && (
+                <p className="text-sm text-destructive">{errors.password}</p>
+              )}
             </div>
             <div className="flex justify-end gap-2">
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => setIsEditDialogOpen(false)}
+                onClick={() => {
+                  setIsEditDialogOpen(false);
+                  setErrors({});
+                }}
               >
                 Cancel
               </Button>
-              <Button type="submit">Update Customer</Button>
+              <Button type="submit">Update Client</Button>
             </div>
           </form>
         </DialogContent>

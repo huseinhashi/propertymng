@@ -116,9 +116,20 @@ export const RepairRequestDetailsPage = () => {
             Edit Request
           </Button>
           {repairRequest.status === "pending" && (
-            <Button onClick={() => handleStatusChange("bidding")}>
-              Move to Bidding
-            </Button>
+            <>
+              <Button 
+                variant="default"
+                onClick={() => handleStatusChange("bidding")}
+              >
+                Accept Request
+              </Button>
+              <Button 
+                variant="destructive" 
+                onClick={() => handleStatusChange("rejected")}
+              >
+                Reject Request
+              </Button>
+            </>
           )}
           {repairRequest.status === "bidding" && (
             <Button variant="destructive" onClick={() => handleStatusChange("rejected")}>

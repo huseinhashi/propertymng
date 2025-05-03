@@ -8,6 +8,8 @@ import { DataTable } from "@/components/ui/data-table";
 import { Pencil, Trash2, Plus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import api from "@/lib/axios";
+import { cn } from "@/lib/utils";
+import { Checkbox } from "@/components/ui/checkbox";
 
 export const ExpertsPage = () => {
   const [experts, setExperts] = useState([]);
@@ -19,14 +21,17 @@ export const ExpertsPage = () => {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedExpert, setSelectedExpert] = useState(null);
+  const [showAllServices, setShowAllServices] = useState(false);
   const [formData, setFormData] = useState({
     full_name: "",
     email: "",
+    phone: "",
     service_type_ids: [],
     address: "",
     password: "",
   });
   const { toast } = useToast();
+  const [errors, setErrors] = useState({});
 
   const columns = [
     {
@@ -134,6 +139,7 @@ export const ExpertsPage = () => {
     setFormData({
       full_name: "",
       email: "",
+      phone: "",
       service_type_ids: [],
       address: "",
       password: "",
@@ -146,6 +152,7 @@ export const ExpertsPage = () => {
     setFormData({
       full_name: expert.full_name,
       email: expert.email,
+      phone: expert.phone,
       service_type_ids: expert.service_types ? expert.service_types.map(st => st.service_type_id) : [],
       address: expert.address,
       password: "", // Don't populate password in edit mode
@@ -186,13 +193,103 @@ export const ExpertsPage = () => {
     });
   };
 
+  const handlePhoneChange = (e) => {
+    const value = e.target.value;
+    // Only allow numbers
+    if (!/^\d*$/.test(value)) return;
+    
+    // If value starts with 252, don't allow removing it
+    if (value.startsWith('252') && value.length < 3) return;
+    
+    // If value doesn't start with 252, add it
+    if (!value.startsWith('252')) {
+      setFormData(prev => ({ ...prev, phone: '252' + value }));
+      return;
+    }
+    
+    // Limit to 12 characters (252 + 9 digits)
+    if (value.length > 12) return;
+    
+    setFormData(prev => ({ ...prev, phone: value }));
+  };
+
+  const validateForm = () => {
+    const newErrors = {};
+    let isValid = true;
+
+    if (!formData.full_name) {
+      newErrors.full_name = "Name is required";
+      isValid = false;
+    } else if (!/^[a-zA-Z\s]+$/.test(formData.full_name)) {
+      newErrors.full_name = "Name can only contain letters and spaces";
+      isValid = false;
+    }
+
+    if (!formData.email) {
+      newErrors.email = "Email is required";
+      isValid = false;
+    } else if (!/^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/.test(formData.email)) {
+      newErrors.email = "Please enter a valid email address";
+      isValid = false;
+    }
+
+    if (!formData.phone) {
+      newErrors.phone = "Phone is required";
+      isValid = false;
+    } else if (!/^252[0-9]{9}$/.test(formData.phone)) {
+      newErrors.phone = "Phone number must start with 252 followed by 9 digits";
+      isValid = false;
+    }
+
+    if (!formData.address) {
+      newErrors.address = "Address is required";
+      isValid = false;
+    }
+
+    if (!selectedExpert) {
+      if (!formData.password) {
+        newErrors.password = "Password is required";
+        isValid = false;
+      } else {
+        if (formData.password.length < 8) {
+          newErrors.password = "Password must be at least 8 characters";
+          isValid = false;
+        }
+        if (!/[A-Z]/.test(formData.password)) {
+          newErrors.password = "Password must contain at least one uppercase letter";
+          isValid = false;
+        }
+        if (!/[a-z]/.test(formData.password)) {
+          newErrors.password = "Password must contain at least one lowercase letter";
+          isValid = false;
+        }
+        if (!/[0-9]/.test(formData.password)) {
+          newErrors.password = "Password must contain at least one number";
+          isValid = false;
+        }
+        if (!/[!@#$%^&*(),.?":{}|<>]/.test(formData.password)) {
+          newErrors.password = "Password must contain at least one special character";
+          isValid = false;
+        }
+      }
+    }
+
+    if (formData.service_type_ids.length === 0) {
+      newErrors.service_type_ids = "At least one service type must be selected";
+      isValid = false;
+    }
+
+    setErrors(newErrors);
+    return isValid;
+  };
+
   const handleAdd = async (e) => {
     e.preventDefault();
-    if (!validateForm() || !formData.password) {
+    if (!validateForm()) {
       toast({
         variant: "destructive",
         title: "Validation Error",
-        description: "Password is required for new experts",
+        description: "Please fix the errors in the form",
       });
       return;
     }
@@ -220,7 +317,14 @@ export const ExpertsPage = () => {
 
   const handleEdit = async (e) => {
     e.preventDefault();
-    if (!validateForm()) return;
+    if (!validateForm()) {
+      toast({
+        variant: "destructive",
+        title: "Validation Error",
+        description: "Please fix the errors in the form",
+      });
+      return;
+    }
 
     try {
       const response = await api.patch(
@@ -274,28 +378,6 @@ export const ExpertsPage = () => {
     }
   };
 
-  const validateForm = () => {
-    if (!formData.full_name || !formData.email || !formData.address) {
-      toast({
-        variant: "destructive",
-        title: "Validation Error",
-        description: "Name, email, and address are required",
-      });
-      return false;
-    }
-
-    if (formData.service_type_ids.length === 0) {
-      toast({
-        variant: "destructive",
-        title: "Validation Error",
-        description: "Please select at least one service type",
-      });
-      return false;
-    }
-    
-    return true;
-  };
-
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
@@ -323,28 +405,12 @@ export const ExpertsPage = () => {
             <DialogTitle>Add New Expert</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleAdd} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="full_name">Full Name</Label>
-              <Input
-                id="full_name"
-                name="full_name"
-                value={formData.full_name}
-                onChange={handleInputChange}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                name="email"
-                value={formData.email}
-                onChange={handleInputChange}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Service Types</Label>
+               <div className="space-y-2">
+              <Label className={cn(errors.service_type_ids && "text-destructive")}>
+                Service Types *
+              </Label>
               <div className="max-h-48 overflow-y-auto border rounded-md p-2">
-                {serviceTypes.map((type) => (
+                {(showAllServices ? serviceTypes : serviceTypes.slice(0, 4)).map((type) => (
                   <div key={type.service_type_id} className="flex items-center space-x-2 py-1">
                     <input
                       type="checkbox"
@@ -354,39 +420,117 @@ export const ExpertsPage = () => {
                       className="h-4 w-4"
                     />
                     <Label htmlFor={`service-type-${type.service_type_id}`} className="cursor-pointer">
-                    {type.name}
+                      {type.name}
                     </Label>
                   </div>
                 ))}
+                {serviceTypes.length > 4 && (
+                  <Button
+                    type="button"
+                    variant="link"
+                    onClick={() => setShowAllServices(!showAllServices)}
+                    className="w-full mt-2"
+                  >
+                    {showAllServices ? "Show Less" : "Show More"}
+                  </Button>
+                )}
               </div>
-              {formData.service_type_ids.length === 0 && (
-                <p className="text-sm text-red-500">Please select at least one service type</p>
+              {errors.service_type_ids && (
+                <p className="text-sm text-destructive">{errors.service_type_ids}</p>
               )}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="address">Address</Label>
+              <Label htmlFor="full_name" className={cn(errors.full_name && "text-destructive")}>
+                Full Name *
+              </Label>
+              <Input
+                id="full_name"
+                name="full_name"
+                value={formData.full_name}
+                onChange={handleInputChange}
+                placeholder="Enter expert name"
+                className={cn(errors.full_name && "border-destructive focus-visible:ring-destructive")}
+              />
+              {errors.full_name && (
+                <p className="text-sm text-destructive">{errors.full_name}</p>
+              )}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="email" className={cn(errors.email && "text-destructive")}>
+                Email *
+              </Label>
+              <Input
+                id="email"
+                name="email"
+                value={formData.email}
+                onChange={handleInputChange}
+                placeholder="example@email.com"
+                type="email"
+                className={cn(errors.email && "border-destructive focus-visible:ring-destructive")}
+              />
+              {errors.email && (
+                <p className="text-sm text-destructive">{errors.email}</p>
+              )}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="phone" className={cn(errors.phone && "text-destructive")}>
+                Phone *
+              </Label>
+              <Input
+                id="phone"
+                name="phone"
+                value={formData.phone}
+                onChange={handlePhoneChange}
+                placeholder="252xxxxxxxxx"
+                maxLength={12}
+                className={cn(errors.phone && "border-destructive focus-visible:ring-destructive")}
+              />
+              {errors.phone && (
+                <p className="text-sm text-destructive">{errors.phone}</p>
+              )}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="address" className={cn(errors.address && "text-destructive")}>
+                Address *
+              </Label>
               <Input
                 id="address"
                 name="address"
                 value={formData.address}
                 onChange={handleInputChange}
+                placeholder="Enter expert address"
+                className={cn(errors.address && "border-destructive focus-visible:ring-destructive")}
               />
+              {errors.address && (
+                <p className="text-sm text-destructive">{errors.address}</p>
+              )}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password" className={cn(errors.password && "text-destructive")}>
+                Password *
+              </Label>
               <Input
                 id="password"
                 name="password"
                 type="password"
                 value={formData.password}
                 onChange={handleInputChange}
+                placeholder="Enter password"
+                className={cn(errors.password && "border-destructive focus-visible:ring-destructive")}
               />
+              {errors.password && (
+                <p className="text-sm text-destructive">{errors.password}</p>
+              )}
             </div>
+         
             <div className="flex justify-end gap-2">
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => setIsAddDialogOpen(false)}
+                onClick={() => {
+                  setIsAddDialogOpen(false);
+                  setErrors({});
+                }}
               >
                 Cancel
               </Button>
@@ -404,27 +548,94 @@ export const ExpertsPage = () => {
           </DialogHeader>
           <form onSubmit={handleEdit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="edit-full_name">Full Name</Label>
+              <Label htmlFor="edit-full_name" className={cn(errors.full_name && "text-destructive")}>
+                Full Name *
+              </Label>
               <Input
                 id="edit-full_name"
                 name="full_name"
                 value={formData.full_name}
                 onChange={handleInputChange}
+                placeholder="Enter expert name"
+                className={cn(errors.full_name && "border-destructive focus-visible:ring-destructive")}
               />
+              {errors.full_name && (
+                <p className="text-sm text-destructive">{errors.full_name}</p>
+              )}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="edit-email">Email</Label>
+              <Label htmlFor="edit-email" className={cn(errors.email && "text-destructive")}>
+                Email *
+              </Label>
               <Input
                 id="edit-email"
                 name="email"
                 value={formData.email}
                 onChange={handleInputChange}
+                placeholder="example@email.com"
+                type="email"
+                className={cn(errors.email && "border-destructive focus-visible:ring-destructive")}
               />
+              {errors.email && (
+                <p className="text-sm text-destructive">{errors.email}</p>
+              )}
             </div>
             <div className="space-y-2">
-              <Label>Service Types</Label>
+              <Label htmlFor="edit-phone" className={cn(errors.phone && "text-destructive")}>
+                Phone *
+              </Label>
+              <Input
+                id="edit-phone"
+                name="phone"
+                value={formData.phone}
+                onChange={handlePhoneChange}
+                placeholder="252xxxxxxxxx"
+                maxLength={12}
+                className={cn(errors.phone && "border-destructive focus-visible:ring-destructive")}
+              />
+              {errors.phone && (
+                <p className="text-sm text-destructive">{errors.phone}</p>
+              )}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-address" className={cn(errors.address && "text-destructive")}>
+                Address *
+              </Label>
+              <Input
+                id="edit-address"
+                name="address"
+                value={formData.address}
+                onChange={handleInputChange}
+                placeholder="Enter expert address"
+                className={cn(errors.address && "border-destructive focus-visible:ring-destructive")}
+              />
+              {errors.address && (
+                <p className="text-sm text-destructive">{errors.address}</p>
+              )}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-password" className={cn(errors.password && "text-destructive")}>
+                Password (leave blank to keep unchanged)
+              </Label>
+              <Input
+                id="edit-password"
+                name="password"
+                type="password"
+                value={formData.password}
+                onChange={handleInputChange}
+                placeholder="Enter new password"
+                className={cn(errors.password && "border-destructive focus-visible:ring-destructive")}
+              />
+              {errors.password && (
+                <p className="text-sm text-destructive">{errors.password}</p>
+              )}
+            </div>
+            <div className="space-y-2">
+              <Label className={cn(errors.service_type_ids && "text-destructive")}>
+                Service Types *
+              </Label>
               <div className="max-h-48 overflow-y-auto border rounded-md p-2">
-                {serviceTypes.map((type) => (
+                {(showAllServices ? serviceTypes : serviceTypes.slice(0, 4)).map((type) => (
                   <div key={type.service_type_id} className="flex items-center space-x-2 py-1">
                     <input
                       type="checkbox"
@@ -434,41 +645,33 @@ export const ExpertsPage = () => {
                       className="h-4 w-4"
                     />
                     <Label htmlFor={`edit-service-type-${type.service_type_id}`} className="cursor-pointer">
-                    {type.name}
+                      {type.name}
                     </Label>
                   </div>
                 ))}
+                {serviceTypes.length > 4 && (
+                  <Button
+                    type="button"
+                    variant="link"
+                    onClick={() => setShowAllServices(!showAllServices)}
+                    className="w-full mt-2"
+                  >
+                    {showAllServices ? "Show Less" : "Show More"}
+                  </Button>
+                )}
               </div>
-              {formData.service_type_ids.length === 0 && (
-                <p className="text-sm text-red-500">Please select at least one service type</p>
+              {errors.service_type_ids && (
+                <p className="text-sm text-destructive">{errors.service_type_ids}</p>
               )}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-address">Address</Label>
-              <Input
-                id="edit-address"
-                name="address"
-                value={formData.address}
-                onChange={handleInputChange}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-password">
-                Password (leave blank to keep unchanged)
-              </Label>
-              <Input
-                id="edit-password"
-                name="password"
-                type="password"
-                value={formData.password}
-                onChange={handleInputChange}
-              />
             </div>
             <div className="flex justify-end gap-2">
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => setIsEditDialogOpen(false)}
+                onClick={() => {
+                  setIsEditDialogOpen(false);
+                  setErrors({});
+                }}
               >
                 Cancel
               </Button>
