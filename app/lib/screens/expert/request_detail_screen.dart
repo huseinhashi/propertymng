@@ -28,10 +28,10 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
 
   // Bid form controllers
   final _costController = TextEditingController();
-  final _deadlineController = TextEditingController();
+  final _durationController = TextEditingController();
   final _descriptionController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
-  DateTime? _selectedDeadline;
+  String _selectedDurationUnit = 'days';
 
   @override
   void initState() {
@@ -42,7 +42,7 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
   @override
   void dispose() {
     _costController.dispose();
-    _deadlineController.dispose();
+    _durationController.dispose();
     _descriptionController.dispose();
     super.dispose();
   }
@@ -65,11 +65,8 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
 
         // Pre-fill form with existing bid values
         _costController.text = bid['cost'].toString();
-        if (bid['deadline'] != null) {
-          _selectedDeadline = DateTime.parse(bid['deadline']);
-          _deadlineController.text =
-              DateFormat('MMM dd, yyyy').format(_selectedDeadline!);
-        }
+        _durationController.text = bid['duration'].toString();
+        _selectedDurationUnit = bid['duration_unit'];
         _descriptionController.text = bid['description'] ?? '';
       }
 
@@ -107,13 +104,15 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
           ? await _repairService.updateBid(
               bidId: _existingBidId!,
               cost: double.parse(_costController.text),
-              deadline: _selectedDeadline!.toIso8601String(),
+              duration: int.parse(_durationController.text),
+              durationUnit: _selectedDurationUnit,
               description: _descriptionController.text,
             )
           : await _repairService.submitBid(
               requestId: widget.requestId,
               cost: double.parse(_costController.text),
-              deadline: _selectedDeadline!.toIso8601String(),
+              duration: int.parse(_durationController.text),
+              durationUnit: _selectedDurationUnit,
               description: _descriptionController.text,
             );
 
@@ -161,50 +160,6 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
           backgroundColor: Colors.red,
         ),
       );
-    }
-  }
-
-  Future<void> _selectDate(BuildContext context) async {
-    final DateTime? picked = await showDatePicker(
-      context: context,
-      initialDate:
-          _selectedDeadline ?? DateTime.now().add(const Duration(days: 7)),
-      firstDate: DateTime.now(),
-      lastDate: DateTime.now().add(const Duration(days: 90)),
-      builder: (context, child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: ColorScheme.light(
-              primary: primaryColor,
-              onPrimary: Colors.white,
-              onSurface: textPrimaryColor,
-            ),
-            textButtonTheme: TextButtonThemeData(
-              style: TextButton.styleFrom(
-                foregroundColor: primaryColor,
-              ),
-            ),
-          ),
-          child: child!,
-        );
-      },
-    );
-
-    if (picked != null && picked != _selectedDeadline) {
-      setState(() {
-        _selectedDeadline = picked;
-        _deadlineController.text = DateFormat('MMM dd, yyyy').format(picked);
-      });
-    }
-  }
-
-  String _formatDate(String? dateString) {
-    if (dateString == null) return 'N/A';
-    try {
-      final date = DateTime.parse(dateString);
-      return DateFormat('MMM dd, yyyy').format(date);
-    } catch (e) {
-      return dateString;
     }
   }
 
@@ -648,36 +603,88 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
 
                                   const SizedBox(height: 16),
 
-                                  // Deadline field
-                                  TextFormField(
-                                    controller: _deadlineController,
-                                    readOnly: true,
-                                    decoration: InputDecoration(
-                                      labelText: 'Estimated Completion Date',
-                                      labelStyle: GoogleFonts.poppins(
-                                          color: textSecondaryColor),
-                                      border: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(12),
+                                  // Duration fields
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        flex: 2,
+                                        child: TextFormField(
+                                          controller: _durationController,
+                                          keyboardType: TextInputType.number,
+                                          decoration: InputDecoration(
+                                            labelText: 'Duration',
+                                            labelStyle: GoogleFonts.poppins(
+                                                color: textSecondaryColor),
+                                            border: OutlineInputBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
+                                            ),
+                                            focusedBorder: OutlineInputBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
+                                              borderSide: BorderSide(
+                                                  color: primaryColor,
+                                                  width: 2),
+                                            ),
+                                          ),
+                                          validator: (value) {
+                                            if (value == null ||
+                                                value.isEmpty) {
+                                              return 'Please enter duration';
+                                            }
+                                            try {
+                                              final duration = int.parse(value);
+                                              if (duration <= 0) {
+                                                return 'Duration must be greater than zero';
+                                              }
+                                            } catch (e) {
+                                              return 'Please enter a valid number';
+                                            }
+                                            return null;
+                                          },
+                                        ),
                                       ),
-                                      focusedBorder: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(12),
-                                        borderSide: BorderSide(
-                                            color: primaryColor, width: 2),
+                                      const SizedBox(width: 16),
+                                      Expanded(
+                                        flex: 1,
+                                        child: DropdownButtonFormField<String>(
+                                          value: _selectedDurationUnit,
+                                          decoration: InputDecoration(
+                                            labelText: 'Unit',
+                                            labelStyle: GoogleFonts.poppins(
+                                                color: textSecondaryColor),
+                                            border: OutlineInputBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
+                                            ),
+                                            focusedBorder: OutlineInputBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
+                                              borderSide: BorderSide(
+                                                  color: primaryColor,
+                                                  width: 2),
+                                            ),
+                                          ),
+                                          items: ['hours', 'days', 'weeks']
+                                              .map((unit) => DropdownMenuItem(
+                                                    value: unit,
+                                                    child: Text(
+                                                      unit.capitalize(),
+                                                      style:
+                                                          GoogleFonts.poppins(),
+                                                    ),
+                                                  ))
+                                              .toList(),
+                                          onChanged: (value) {
+                                            if (value != null) {
+                                              setState(() {
+                                                _selectedDurationUnit = value;
+                                              });
+                                            }
+                                          },
+                                        ),
                                       ),
-                                      prefixIcon: Icon(Icons.calendar_today,
-                                          color: primaryColor),
-                                      suffixIcon: IconButton(
-                                        icon: const Icon(Icons.calendar_month),
-                                        onPressed: () => _selectDate(context),
-                                      ),
-                                    ),
-                                    onTap: () => _selectDate(context),
-                                    validator: (value) {
-                                      if (value == null || value.isEmpty) {
-                                        return 'Please select an estimated completion date';
-                                      }
-                                      return null;
-                                    },
+                                    ],
                                   ),
 
                                   const SizedBox(height: 16),
@@ -784,5 +791,21 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
                   ),
                 ),
     );
+  }
+
+  String _formatDate(String? dateString) {
+    if (dateString == null) return 'N/A';
+    try {
+      final date = DateTime.parse(dateString);
+      return DateFormat('MMM dd, yyyy').format(date);
+    } catch (e) {
+      return dateString;
+    }
+  }
+}
+
+extension StringExtension on String {
+  String capitalize() {
+    return "${this[0].toUpperCase()}${substring(1)}";
   }
 }

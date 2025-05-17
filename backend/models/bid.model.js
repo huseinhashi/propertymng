@@ -19,9 +19,15 @@ const Bid = sequelize.define("bid", {
     type: DataTypes.DECIMAL(10, 2),
     allowNull: false,
   },
-  deadline: {
-    type: DataTypes.DATE,
+  duration: {
+    type: DataTypes.INTEGER,
     allowNull: false,
+    comment: "Number of units (e.g., 2 for 2 days)",
+  },
+  duration_unit: {
+    type: DataTypes.ENUM("hours", "days", "weeks"),
+    allowNull: false,
+    comment: "Unit of duration (hours, days, or weeks)",
   },
   description: {
     type: DataTypes.TEXT,

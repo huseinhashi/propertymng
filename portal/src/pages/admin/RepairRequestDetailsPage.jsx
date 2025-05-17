@@ -250,7 +250,7 @@ export const RepairRequestDetailsPage = () => {
                         <div className="space-y-2">
                           <p>{bid.description}</p>
                           <p className="text-sm text-muted-foreground">
-                            Estimated completion by: {format(new Date(bid.deadline), "PPP")}
+                            Estimated completion time: {bid.duration} {bid.duration_unit}
                           </p>
                         </div>
                       </CardContent>

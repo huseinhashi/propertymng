@@ -1,4 +1,5 @@
 import Customer from "../models/customer.model.js";
+import bcrypt from "bcryptjs";
 
 // Get all customers with optional search
 export const getAllCustomers = async (req, res, next) => {
@@ -30,6 +31,7 @@ export const getAllCustomers = async (req, res, next) => {
 export const createCustomer = async (req, res, next) => {
   try {
     const { name, phone, address, password } = req.body;
+    const hashedPassword = await bcrypt.hash(password, 10);
 
     const existingCustomer = await Customer.findOne({ where: { phone } });
     if (existingCustomer) {
@@ -43,7 +45,7 @@ export const createCustomer = async (req, res, next) => {
       name,
       phone,
       address,
-      password_hash: password, // Hashing should be implemented in the model or middleware
+      password_hash: hashedPassword, // Hashing should be implemented in the model or middleware
     });
 
     res.status(201).json({
@@ -61,7 +63,7 @@ export const updateCustomer = async (req, res, next) => {
   try {
     const { id } = req.params;
     const { name, phone, address, password } = req.body;
-
+    const hashedPassword = await bcrypt.hash(password, 10);
     const customer = await Customer.findByPk(id);
     if (!customer) {
       return res.status(404).json({
@@ -84,7 +86,7 @@ export const updateCustomer = async (req, res, next) => {
     customer.phone = phone || customer.phone;
     customer.address = address || customer.address;
     if (password) {
-      customer.password_hash = password; // Hashing should be implemented
+      customer.password_hash = hashedPassword; // Hashing should be implemented
     }
 
     await customer.save();

@@ -373,7 +373,7 @@ class _HomeTabState extends State<HomeTab> {
                                             horizontal: 24, vertical: 12),
                                       ),
                                       icon: const Icon(Icons.gavel, size: 16),
-                                      label: Text('Place Bid',
+                                      label: Text('Accept Request',
                                           style: GoogleFonts.poppins()),
                                     ),
                                   ),

@@ -83,6 +83,25 @@ export const acceptBid = async (req, res, next) => {
     repairRequest.status = "closed";
     await repairRequest.save({ transaction });
 
+    // Calculate deadline based on duration and duration_unit
+    const now = new Date();
+    let deadline;
+    switch (bid.duration_unit) {
+      case "hours":
+        deadline = new Date(now.getTime() + bid.duration * 60 * 60 * 1000);
+        break;
+      case "days":
+        deadline = new Date(now.getTime() + bid.duration * 24 * 60 * 60 * 1000);
+        break;
+      case "weeks":
+        deadline = new Date(
+          now.getTime() + bid.duration * 7 * 24 * 60 * 60 * 1000
+        );
+        break;
+      default:
+        deadline = new Date(now.getTime() + bid.duration * 24 * 60 * 60 * 1000); // Default to days
+    }
+
     // Create a new service order
     const serviceOrder = await ServiceOrder.create(
       {
@@ -91,8 +110,7 @@ export const acceptBid = async (req, res, next) => {
         total_price: bid.cost,
         status: "in_progress",
         payment_status: "unpaid", // Initially set as unpaid
-
-        deadline: bid.deadline,
+        deadline: deadline,
       },
       { transaction }
     );

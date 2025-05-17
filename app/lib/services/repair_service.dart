@@ -171,7 +171,8 @@ class RepairService {
   Future<Map<String, dynamic>> submitBid({
     required int requestId,
     required double cost,
-    required String deadline,
+    required int duration,
+    required String durationUnit,
     String? description,
   }) async {
     try {
@@ -181,7 +182,8 @@ class RepairService {
         data: {
           'request_id': requestId,
           'cost': cost,
-          'deadline': deadline,
+          'duration': duration,
+          'duration_unit': durationUnit,
           'description': description ?? '',
         },
       );
@@ -199,13 +201,15 @@ class RepairService {
   Future<Map<String, dynamic>> updateBid({
     required int bidId,
     double? cost,
-    String? deadline,
+    int? duration,
+    String? durationUnit,
     String? description,
   }) async {
     try {
       final data = <String, dynamic>{};
       if (cost != null) data['cost'] = cost;
-      if (deadline != null) data['deadline'] = deadline;
+      if (duration != null) data['duration'] = duration;
+      if (durationUnit != null) data['duration_unit'] = durationUnit;
       if (description != null) data['description'] = description;
 
       final response = await _apiClient.request(

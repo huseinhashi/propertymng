@@ -534,87 +534,144 @@ class _RequestDetailsScreenState extends State<RequestDetailsScreen> {
                               children: [
                                 _buildSectionHeader("Expert Bids"),
                                 const SizedBox(height: 16),
-                                ListView.builder(
-                                  shrinkWrap: true,
-                                  physics: const NeverScrollableScrollPhysics(),
-                                  itemCount: _bids.length,
-                                  itemBuilder: (context, index) {
-                                    final bid = _bids[index];
-                                    final isAccepted =
-                                        bid['is_accepted'] ?? false;
-                                    final isSelectable =
-                                        _selectedBidId == null ||
-                                            _selectedBidId == bid['bid_id'];
-                                    final expert = bid['expert'] ?? {};
-
-                                    return Container(
-                                      margin: const EdgeInsets.only(bottom: 16),
-                                      decoration: BoxDecoration(
-                                        color: isAccepted
-                                            ? accentColor.withOpacity(0.05)
-                                            : Colors.white,
-                                        borderRadius: BorderRadius.circular(16),
-                                        border: isAccepted
-                                            ? Border.all(
-                                                color: accentColor
-                                                    .withOpacity(0.3),
-                                                width: 1.5)
-                                            : null,
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color:
-                                                Colors.black.withOpacity(0.05),
-                                            blurRadius: 10,
-                                            offset: const Offset(0, 4),
-                                          ),
-                                        ],
+                                Container(
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(12),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withOpacity(0.05),
+                                        blurRadius: 10,
+                                        offset: const Offset(0, 4),
                                       ),
-                                      child: Column(
-                                        children: [
-                                          // Expert info section
-                                          Padding(
-                                            padding: const EdgeInsets.all(16),
+                                    ],
+                                  ),
+                                  child: Column(
+                                    children: [
+                                      // Table Header
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 16, vertical: 12),
+                                        decoration: BoxDecoration(
+                                          color: Colors.grey.shade50,
+                                          borderRadius: const BorderRadius.only(
+                                            topLeft: Radius.circular(12),
+                                            topRight: Radius.circular(12),
+                                          ),
+                                        ),
+                                        child: Row(
+                                          children: [
+                                            Expanded(
+                                              flex: 3,
+                                              child: Text(
+                                                "Expert",
+                                                style: GoogleFonts.poppins(
+                                                  fontWeight: FontWeight.w600,
+                                                  color: textPrimaryColor,
+                                                ),
+                                              ),
+                                            ),
+                                            Expanded(
+                                              flex: 2,
+                                              child: Text(
+                                                "Estimated Time",
+                                                style: GoogleFonts.poppins(
+                                                  fontWeight: FontWeight.w600,
+                                                  color: textPrimaryColor,
+                                                ),
+                                              ),
+                                            ),
+                                            Expanded(
+                                              flex: 2,
+                                              child: Text(
+                                                "Amount",
+                                                style: GoogleFonts.poppins(
+                                                  fontWeight: FontWeight.w600,
+                                                  color: textPrimaryColor,
+                                                ),
+                                              ),
+                                            ),
+                                            Expanded(
+                                              flex: 2,
+                                              child: Text(
+                                                "Action",
+                                                style: GoogleFonts.poppins(
+                                                  fontWeight: FontWeight.w600,
+                                                  color: textPrimaryColor,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      // Table Rows
+                                      ListView.builder(
+                                        shrinkWrap: true,
+                                        physics:
+                                            const NeverScrollableScrollPhysics(),
+                                        itemCount: _bids.length,
+                                        itemBuilder: (context, index) {
+                                          final bid = _bids[index];
+                                          final isAccepted =
+                                              bid['is_accepted'] ?? false;
+                                          final isSelectable = _selectedBidId ==
+                                                  null ||
+                                              _selectedBidId == bid['bid_id'];
+                                          final expert = bid['expert'] ?? {};
+
+                                          return Container(
+                                            padding: const EdgeInsets.symmetric(
+                                                horizontal: 16, vertical: 12),
+                                            decoration: BoxDecoration(
+                                              border: Border(
+                                                bottom: BorderSide(
+                                                  color: Colors.grey.shade200,
+                                                  width: 1,
+                                                ),
+                                              ),
+                                            ),
                                             child: Row(
                                               children: [
-                                                GestureDetector(
-                                                  onTap: () =>
-                                                      _showExpertProfile(
-                                                          expert),
-                                                  child: CircleAvatar(
-                                                    backgroundColor:
-                                                        primaryColor
-                                                            .withOpacity(0.1),
-                                                    child: Text(
-                                                      (expert['full_name']
-                                                                  as String? ??
-                                                              'E')
-                                                          .substring(0, 1)
-                                                          .toUpperCase(),
-                                                      style:
-                                                          GoogleFonts.poppins(
-                                                        color: primaryColor,
-                                                        fontWeight:
-                                                            FontWeight.w600,
-                                                      ),
-                                                    ),
-                                                  ),
-                                                ),
-                                                const SizedBox(width: 12),
+                                                // Expert Column
                                                 Expanded(
-                                                  child: Column(
-                                                    crossAxisAlignment:
-                                                        CrossAxisAlignment
-                                                            .start,
-                                                    children: [
-                                                      Row(
-                                                        children: [
-                                                          Expanded(
-                                                            child:
-                                                                GestureDetector(
-                                                              onTap: () =>
-                                                                  _showExpertProfile(
-                                                                      expert),
-                                                              child: Text(
+                                                  flex: 3,
+                                                  child: GestureDetector(
+                                                    onTap: () =>
+                                                        _showExpertProfile(
+                                                            expert),
+                                                    child: Row(
+                                                      children: [
+                                                        CircleAvatar(
+                                                          backgroundColor:
+                                                              primaryColor
+                                                                  .withOpacity(
+                                                                      0.1),
+                                                          radius: 16,
+                                                          child: Text(
+                                                            (expert['full_name']
+                                                                        as String? ??
+                                                                    'E')
+                                                                .substring(0, 1)
+                                                                .toUpperCase(),
+                                                            style: GoogleFonts
+                                                                .poppins(
+                                                              color:
+                                                                  primaryColor,
+                                                              fontWeight:
+                                                                  FontWeight
+                                                                      .w600,
+                                                            ),
+                                                          ),
+                                                        ),
+                                                        const SizedBox(
+                                                            width: 8),
+                                                        Expanded(
+                                                          child: Column(
+                                                            crossAxisAlignment:
+                                                                CrossAxisAlignment
+                                                                    .start,
+                                                            children: [
+                                                              Text(
                                                                 expert['full_name'] ??
                                                                     'Expert',
                                                                 style:
@@ -622,205 +679,167 @@ class _RequestDetailsScreenState extends State<RequestDetailsScreen> {
                                                                         .poppins(
                                                                   fontWeight:
                                                                       FontWeight
-                                                                          .w600,
-                                                                  fontSize: 16,
+                                                                          .w500,
                                                                   color:
                                                                       textPrimaryColor,
+                                                                  fontSize: 13,
                                                                 ),
+                                                                overflow:
+                                                                    TextOverflow
+                                                                        .ellipsis,
+                                                                maxLines: 1,
                                                               ),
-                                                            ),
+                                                              if (expert[
+                                                                      'is_verified'] ==
+                                                                  true)
+                                                                Row(
+                                                                  children: [
+                                                                    Icon(
+                                                                        Icons
+                                                                            .verified,
+                                                                        size:
+                                                                            12,
+                                                                        color: Colors
+                                                                            .green),
+                                                                    const SizedBox(
+                                                                        width:
+                                                                            4),
+                                                                    Text(
+                                                                      'Verified',
+                                                                      style: GoogleFonts
+                                                                          .poppins(
+                                                                        fontSize:
+                                                                            11,
+                                                                        color: Colors
+                                                                            .green,
+                                                                      ),
+                                                                    ),
+                                                                  ],
+                                                                ),
+                                                            ],
                                                           ),
-                                                          if (expert[
-                                                                  'is_verified'] ==
-                                                              true)
-                                                            Container(
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  ),
+                                                ),
+                                                // Estimated Time Column
+                                                Expanded(
+                                                  flex: 2,
+                                                  child: Text(
+                                                    "${bid['duration']} ${bid['duration_unit']}",
+                                                    style: GoogleFonts.poppins(
+                                                      color: textSecondaryColor,
+                                                      fontSize: 13,
+                                                    ),
+                                                    overflow:
+                                                        TextOverflow.ellipsis,
+                                                    maxLines: 1,
+                                                  ),
+                                                ),
+                                                // Amount Column
+                                                Expanded(
+                                                  flex: 2,
+                                                  child: Text(
+                                                    "\$${bid['cost']}",
+                                                    style: GoogleFonts.poppins(
+                                                      fontWeight:
+                                                          FontWeight.w600,
+                                                      color: accentColor,
+                                                      fontSize: 13,
+                                                    ),
+                                                    overflow:
+                                                        TextOverflow.ellipsis,
+                                                    maxLines: 1,
+                                                  ),
+                                                ),
+                                                // Action Column
+                                                Expanded(
+                                                  flex: 2,
+                                                  child: isAccepted
+                                                      ? Row(
+                                                          children: [
+                                                            Icon(
+                                                                Icons
+                                                                    .check_circle,
+                                                                size: 16,
+                                                                color: Colors
+                                                                    .green),
+                                                            const SizedBox(
+                                                                width: 4),
+                                                            Text(
+                                                              "Accepted",
+                                                              style: GoogleFonts
+                                                                  .poppins(
+                                                                fontSize: 12,
+                                                                color: Colors
+                                                                    .green,
+                                                              ),
+                                                              overflow:
+                                                                  TextOverflow
+                                                                      .ellipsis,
+                                                              maxLines: 1,
+                                                            ),
+                                                          ],
+                                                        )
+                                                      : SizedBox(
+                                                          height: 32,
+                                                          child: ElevatedButton(
+                                                            onPressed: isSelectable &&
+                                                                    _requestDetails![
+                                                                            'status'] ==
+                                                                        'bidding'
+                                                                ? () => _acceptBid(
+                                                                    bid['bid_id'])
+                                                                : null,
+                                                            style:
+                                                                ElevatedButton
+                                                                    .styleFrom(
+                                                              backgroundColor:
+                                                                  accentColor,
+                                                              foregroundColor:
+                                                                  Colors.white,
+                                                              disabledBackgroundColor:
+                                                                  Colors.grey
+                                                                      .shade300,
+                                                              disabledForegroundColor:
+                                                                  Colors.grey
+                                                                      .shade600,
                                                               padding:
                                                                   const EdgeInsets
                                                                       .symmetric(
                                                                       horizontal:
-                                                                          8,
+                                                                          12,
                                                                       vertical:
-                                                                          4),
-                                                              decoration:
-                                                                  BoxDecoration(
-                                                                color: Colors
-                                                                    .green
-                                                                    .withOpacity(
-                                                                        0.1),
+                                                                          0),
+                                                              shape:
+                                                                  RoundedRectangleBorder(
                                                                 borderRadius:
                                                                     BorderRadius
                                                                         .circular(
-                                                                            12),
-                                                              ),
-                                                              child: Row(
-                                                                children: [
-                                                                  const Icon(
-                                                                    Icons
-                                                                        .verified,
-                                                                    size: 14,
-                                                                    color: Colors
-                                                                        .green,
-                                                                  ),
-                                                                  const SizedBox(
-                                                                      width: 4),
-                                                                  Text(
-                                                                    'Verified',
-                                                                    style: GoogleFonts
-                                                                        .poppins(
-                                                                      fontSize:
-                                                                          12,
-                                                                      fontWeight:
-                                                                          FontWeight
-                                                                              .w500,
-                                                                      color: Colors
-                                                                          .green,
-                                                                    ),
-                                                                  ),
-                                                                ],
+                                                                            6),
                                                               ),
                                                             ),
-                                                        ],
-                                                      ),
-                                                      const SizedBox(height: 4),
-                                                      Text(
-                                                        "Deadline: ${_formatDate(bid['deadline'])}",
-                                                        style:
-                                                            GoogleFonts.poppins(
-                                                          fontSize: 13,
-                                                          color:
-                                                              textSecondaryColor,
+                                                            child: Text(
+                                                              "Accept",
+                                                              style: GoogleFonts
+                                                                  .poppins(
+                                                                fontSize: 12,
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .w500,
+                                                              ),
+                                                            ),
+                                                          ),
                                                         ),
-                                                      ),
-                                                    ],
-                                                  ),
-                                                ),
-                                                Text(
-                                                  "\$${bid['cost']}",
-                                                  style: GoogleFonts.poppins(
-                                                    fontSize: 20,
-                                                    fontWeight: FontWeight.bold,
-                                                    color: accentColor,
-                                                  ),
                                                 ),
                                               ],
                                             ),
-                                          ),
-
-                                          // Bid description
-                                          if (bid['description'] != null &&
-                                              bid['description']
-                                                  .toString()
-                                                  .isNotEmpty)
-                                            Container(
-                                              width: double.infinity,
-                                              padding:
-                                                  const EdgeInsets.fromLTRB(
-                                                      16, 0, 16, 16),
-                                              child: Column(
-                                                crossAxisAlignment:
-                                                    CrossAxisAlignment.start,
-                                                children: [
-                                                  Text(
-                                                    "Description:",
-                                                    style: GoogleFonts.poppins(
-                                                      fontSize: 14,
-                                                      fontWeight:
-                                                          FontWeight.w600,
-                                                      color: textPrimaryColor,
-                                                    ),
-                                                  ),
-                                                  const SizedBox(height: 4),
-                                                  Text(
-                                                    bid['description'],
-                                                    style: GoogleFonts.poppins(
-                                                      fontSize: 14,
-                                                      color: textSecondaryColor,
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                            ),
-
-                                          // Action button
-                                          Container(
-                                            width: double.infinity,
-                                            padding: const EdgeInsets.all(12),
-                                            decoration: BoxDecoration(
-                                              color: Colors.grey.shade50,
-                                              borderRadius:
-                                                  const BorderRadius.only(
-                                                bottomLeft: Radius.circular(16),
-                                                bottomRight:
-                                                    Radius.circular(16),
-                                              ),
-                                            ),
-                                            child: Row(
-                                              mainAxisAlignment:
-                                                  MainAxisAlignment.center,
-                                              children: [
-                                                if (isAccepted)
-                                                  Row(
-                                                    children: [
-                                                      const Icon(
-                                                        Icons.check_circle,
-                                                        size: 18,
-                                                        color: Colors.green,
-                                                      ),
-                                                      const SizedBox(width: 8),
-                                                      Text(
-                                                        "Accepted Bid",
-                                                        style:
-                                                            GoogleFonts.poppins(
-                                                          fontSize: 14,
-                                                          fontWeight:
-                                                              FontWeight.w500,
-                                                          color: Colors.green,
-                                                        ),
-                                                      ),
-                                                    ],
-                                                  )
-                                                else
-                                                  ElevatedButton(
-                                                    onPressed: isSelectable &&
-                                                            _requestDetails![
-                                                                    'status'] ==
-                                                                'bidding'
-                                                        ? () => _acceptBid(
-                                                            bid['bid_id'])
-                                                        : null,
-                                                    style: ElevatedButton
-                                                        .styleFrom(
-                                                      backgroundColor:
-                                                          accentColor,
-                                                      foregroundColor:
-                                                          Colors.white,
-                                                      disabledBackgroundColor:
-                                                          Colors.grey.shade300,
-                                                      disabledForegroundColor:
-                                                          Colors.grey.shade600,
-                                                      shape:
-                                                          RoundedRectangleBorder(
-                                                        borderRadius:
-                                                            BorderRadius
-                                                                .circular(8),
-                                                      ),
-                                                    ),
-                                                    child: Text(
-                                                      "Accept Bid",
-                                                      style:
-                                                          GoogleFonts.poppins(
-                                                        fontWeight:
-                                                            FontWeight.w500,
-                                                      ),
-                                                    ),
-                                                  ),
-                                              ],
-                                            ),
-                                          ),
-                                        ],
+                                          );
+                                        },
                                       ),
-                                    );
-                                  },
+                                    ],
+                                  ),
                                 ),
                               ],
                             )

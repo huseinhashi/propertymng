@@ -64,14 +64,32 @@ export const createBid = async (req, res, next) => {
 
   try {
     const expertId = req.user.expert_id;
-    const { request_id, cost, deadline, description } = req.body;
+    const { request_id, cost, duration, duration_unit, description } = req.body;
 
     // Validate required fields
-    if (!request_id || !cost || !deadline) {
+    if (!request_id || !cost || !duration || !duration_unit) {
       await transaction.rollback();
       return res.status(400).json({
         success: false,
-        message: "Request ID, cost, and deadline are required",
+        message: "Request ID, cost, duration, and duration unit are required",
+      });
+    }
+
+    // Validate duration unit
+    if (!["hours", "days", "weeks"].includes(duration_unit)) {
+      await transaction.rollback();
+      return res.status(400).json({
+        success: false,
+        message: "Duration unit must be one of: hours, days, weeks",
+      });
+    }
+
+    // Validate duration value
+    if (duration <= 0) {
+      await transaction.rollback();
+      return res.status(400).json({
+        success: false,
+        message: "Duration must be greater than zero",
       });
     }
 
@@ -119,7 +137,8 @@ export const createBid = async (req, res, next) => {
         request_id,
         expert_id: expertId,
         cost,
-        deadline,
+        duration,
+        duration_unit: duration_unit,
         description: description || "",
         is_accepted: false,
       },
@@ -151,7 +170,7 @@ export const updateMyBid = async (req, res, next) => {
   try {
     const expertId = req.user.expert_id;
     const { id } = req.params;
-    const { cost, deadline, description } = req.body;
+    const { cost, duration, duration_unit, description } = req.body;
 
     // Find the bid
     const bid = await Bid.findOne({
@@ -189,9 +208,28 @@ export const updateMyBid = async (req, res, next) => {
       });
     }
 
+    // Validate duration unit if provided
+    if (duration_unit && !["hours", "days", "weeks"].includes(duration_unit)) {
+      await transaction.rollback();
+      return res.status(400).json({
+        success: false,
+        message: "Duration unit must be one of: hours, days, weeks",
+      });
+    }
+
+    // Validate duration value if provided
+    if (duration !== undefined && duration <= 0) {
+      await transaction.rollback();
+      return res.status(400).json({
+        success: false,
+        message: "Duration must be greater than zero",
+      });
+    }
+
     // Update fields
     if (cost !== undefined) bid.cost = cost;
-    if (deadline !== undefined) bid.deadline = deadline;
+    if (duration !== undefined) bid.duration = duration;
+    if (duration_unit !== undefined) bid.duration_unit = duration_unit;
     if (description !== undefined) bid.description = description;
 
     await bid.save({ transaction });

@@ -165,14 +165,40 @@ export const createBid = async (req, res, next) => {
   const transaction = await sequelize.transaction();
 
   try {
-    const { request_id, expert_id, cost, deadline, description } = req.body;
+    const {
+      request_id,
+      expert_id,
+      cost,
+      duration,
+      duration_unit,
+      description,
+    } = req.body;
 
     // Validate required fields
-    if (!request_id || !expert_id || !cost || !deadline) {
+    if (!request_id || !expert_id || !cost || !duration || !duration_unit) {
       await transaction.rollback();
       return res.status(400).json({
         success: false,
-        message: "Request ID, expert ID, cost, and deadline are required",
+        message:
+          "Request ID, expert ID, cost, duration, and duration unit are required",
+      });
+    }
+
+    // Validate duration unit
+    if (!["hours", "days", "weeks"].includes(duration_unit)) {
+      await transaction.rollback();
+      return res.status(400).json({
+        success: false,
+        message: "Duration unit must be one of: hours, days, weeks",
+      });
+    }
+
+    // Validate duration value
+    if (duration <= 0) {
+      await transaction.rollback();
+      return res.status(400).json({
+        success: false,
+        message: "Duration must be greater than zero",
       });
     }
 
@@ -213,7 +239,8 @@ export const createBid = async (req, res, next) => {
         request_id,
         expert_id,
         cost,
-        deadline,
+        duration,
+        duration_unit: duration_unit,
         description: description || "",
         is_accepted: false,
       },
@@ -247,7 +274,8 @@ export const updateBid = async (req, res, next) => {
 
   try {
     const { id } = req.params;
-    const { cost, deadline, description, is_accepted } = req.body;
+    const { cost, duration, duration_unit, description, is_accepted } =
+      req.body;
 
     // Find the bid
     const bid = await Bid.findByPk(id, {
@@ -276,9 +304,28 @@ export const updateBid = async (req, res, next) => {
       });
     }
 
+    // Validate duration unit if provided
+    if (duration_unit && !["hours", "days", "weeks"].includes(duration_unit)) {
+      await transaction.rollback();
+      return res.status(400).json({
+        success: false,
+        message: "Duration unit must be one of: hours, days, weeks",
+      });
+    }
+
+    // Validate duration value if provided
+    if (duration !== undefined && duration <= 0) {
+      await transaction.rollback();
+      return res.status(400).json({
+        success: false,
+        message: "Duration must be greater than zero",
+      });
+    }
+
     // Update fields
     if (cost !== undefined) bid.cost = cost;
-    if (deadline !== undefined) bid.deadline = deadline;
+    if (duration !== undefined) bid.duration = duration;
+    if (duration_unit !== undefined) bid.duration_unit = duration_unit;
     if (description !== undefined) bid.description = description;
 
     // If we're accepting the bid, handle all the related updates
@@ -307,18 +354,10 @@ export const updateBid = async (req, res, next) => {
     await bid.save({ transaction });
     await transaction.commit();
 
-    // Fetch updated bid with associations
-    const updatedBid = await Bid.findByPk(id, {
-      include: [
-        { model: Expert, attributes: ["expert_id", "full_name", "email"] },
-        { model: RepairRequest },
-      ],
-    });
-
     res.status(200).json({
       success: true,
       message: "Bid updated successfully",
-      data: updatedBid,
+      data: bid,
     });
   } catch (error) {
     await transaction.rollback();
