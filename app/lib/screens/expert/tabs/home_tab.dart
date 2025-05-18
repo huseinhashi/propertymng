@@ -372,8 +372,17 @@ class _HomeTabState extends State<HomeTab> {
                                         padding: const EdgeInsets.symmetric(
                                             horizontal: 24, vertical: 12),
                                       ),
-                                      icon: const Icon(Icons.gavel, size: 16),
-                                      label: Text('Accept Request',
+                                      icon: Icon(
+                                          request['bids'] != null &&
+                                                  request['bids'].isNotEmpty
+                                              ? Icons.edit
+                                              : Icons.gavel,
+                                          size: 16),
+                                      label: Text(
+                                          request['bids'] != null &&
+                                                  request['bids'].isNotEmpty
+                                              ? 'Update Bid'
+                                              : 'Accept Request',
                                           style: GoogleFonts.poppins()),
                                     ),
                                   ),

@@ -1,3 +1,4 @@
+import 'package:app/screens/customer/orders_screen.dart';
 import 'package:app/services/api_client.dart';
 import 'package:app/utils/AppColor.dart';
 import 'package:flutter/material.dart';
@@ -87,8 +88,12 @@ class _RequestDetailsScreenState extends State<RequestDetailsScreen> {
               backgroundColor: Colors.green,
             ),
           );
-          // Refresh the request details to get updated status
-          _fetchRequestDetails();
+          // Navigate to orders screen after successful bid acceptance
+          if (!mounted) return;
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const OrdersScreen()),
+          );
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(

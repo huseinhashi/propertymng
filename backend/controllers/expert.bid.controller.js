@@ -341,27 +341,26 @@ export const getAvailableRequests = async (req, res, next) => {
         { model: Customer, attributes: ["name"] },
         { model: ServiceType },
         { model: ServiceImage },
+        {
+          model: Bid,
+          as: "bids",
+          where: { expert_id: expertId },
+          required: false,
+          include: [
+            {
+              model: Expert,
+              attributes: ["expert_id", "full_name", "is_verified"],
+            },
+          ],
+        },
       ],
       order: [["createdAt", "DESC"]],
     });
 
-    // Get the IDs of requests the expert has already bid on
-    const expertBids = await Bid.findAll({
-      where: { expert_id: expertId },
-      attributes: ["request_id"],
-    });
-
-    const biddedRequestIds = expertBids.map((bid) => bid.request_id);
-
-    // Filter out requests the expert has already bid on
-    const unbiddedRequests = availableRequests.filter(
-      (request) => !biddedRequestIds.includes(request.request_id)
-    );
-
     res.status(200).json({
       success: true,
-      count: unbiddedRequests.length,
-      data: unbiddedRequests,
+      count: availableRequests.length,
+      data: availableRequests,
     });
   } catch (error) {
     next(error);
