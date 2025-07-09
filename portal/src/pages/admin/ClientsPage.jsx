@@ -24,6 +24,7 @@ export const ClientsPage = () => {
     phone: "",
     address: "",
     password: "",
+    is_active: false,
   });
   const { toast } = useToast();
   const [errors, setErrors] = useState({});
@@ -112,6 +113,7 @@ export const ClientsPage = () => {
       phone: "",
       address: "",
       password: "",
+      is_active: false,
     });
     setIsAddDialogOpen(true);
   };
@@ -123,6 +125,7 @@ export const ClientsPage = () => {
       phone: client.phone,
       address: client.address,
       password: "", // Don't populate password in edit mode
+      is_active: client.is_active,
     });
     setIsEditDialogOpen(true);
   };
@@ -133,10 +136,10 @@ export const ClientsPage = () => {
   };
 
   const handleInputChange = (e) => {
-    const { name, value } = e.target;
+    const { name, value, type, checked } = e.target;
     setFormData((prev) => ({
       ...prev,
-      [name]: value,
+      [name]: type === "checkbox" ? checked : value,
     }));
   };
 
@@ -411,6 +414,17 @@ export const ClientsPage = () => {
                 <p className="text-sm text-destructive">{errors.password}</p>
               )}
             </div>
+            <div className="space-y-2">
+              <Label htmlFor="is_active">Active</Label>
+              <input
+                id="is_active"
+                name="is_active"
+                type="checkbox"
+                checked={formData.is_active}
+                onChange={handleInputChange}
+                className="h-4 w-4"
+              />
+            </div>
             <div className="flex justify-end gap-2">
               <Button
                 type="button"
@@ -500,6 +514,17 @@ export const ClientsPage = () => {
               {errors.password && (
                 <p className="text-sm text-destructive">{errors.password}</p>
               )}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="is_active">Active</Label>
+              <input
+                id="is_active"
+                name="is_active"
+                type="checkbox"
+                checked={formData.is_active}
+                onChange={handleInputChange}
+                className="h-4 w-4"
+              />
             </div>
             <div className="flex justify-end gap-2">
               <Button

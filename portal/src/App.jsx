@@ -20,6 +20,9 @@ import { RepairRequestDetailsPage } from "./pages/admin/RepairRequestDetailsPage
 import { ServiceOrdersPage } from "@/pages/admin/ServiceOrdersPage";
 import { ServiceOrderDetailsPage } from "@/pages/admin/ServiceOrderDetailsPage";
 import { PaymentLogsPage } from "@/pages/admin/PaymentLogsPage";
+import { RefundsPage } from "@/pages/admin/RefundsPage";
+import { PayoutLogsPage } from "./pages/admin/PayoutLogsPage";
+
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
@@ -59,6 +62,8 @@ function App() {
                       <Route path="service-orders" element={<ServiceOrdersPage />} />
                       <Route path="service-orders/:id" element={<ServiceOrderDetailsPage />} />
                       <Route path="payments" element={<PaymentLogsPage />} />
+                      <Route path="refunds" element={<RefundsPage />} />
+                      <Route path="payouts" element={<PayoutLogsPage />} />
                     </Routes>
                   </DashboardLayout>
                 </ProtectedRoute>

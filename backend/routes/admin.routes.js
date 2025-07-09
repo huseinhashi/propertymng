@@ -57,6 +57,18 @@ import {
   updatePaymentStatus as updatePaymentStatusAdmin,
   getPaymentStats,
 } from "../controllers/admin.payment.controller.js";
+import {
+  getAllRefundRequests,
+  getRefundRequestById,
+  adminUpdateRefundStatus,
+  getRefundRequestsForOrder,
+  updateRefundRequest,
+} from "../controllers/refund-request.controller.js";
+import {
+  getAllPayouts,
+  getPayoutById,
+  updatePayoutStatus,
+} from "../controllers/payout.controller.js";
 
 const router = express.Router();
 router.use(verifyToken);
@@ -132,5 +144,17 @@ router.get("/payments", getAllPayments);
 router.get("/payments/:id", getPaymentById);
 router.get("/payments-stats", getPaymentStats);
 router.patch("/payments/:id/status", updatePaymentStatusAdmin);
+
+// Refund routes
+router.get("/refunds", getAllRefundRequests);
+router.get("/refunds/:refundId", getRefundRequestById);
+router.patch("/refunds/:refundId/status", adminUpdateRefundStatus);
+router.patch("/refunds/:refundId", updateRefundRequest);
+router.get("/service-orders/:orderId/refunds", getRefundRequestsForOrder);
+
+// Payout routes
+router.get("/payouts", getAllPayouts);
+router.get("/payouts/:id", getPayoutById);
+router.patch("/payouts/:id/status", updatePayoutStatus);
 
 export default router;

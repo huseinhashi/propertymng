@@ -12,7 +12,16 @@ import {
   getServiceOrderById,
   processPayment,
   processPaymentById,
+  markOrderAsDelivered,
+  markNotificationAsRead,
 } from "../controllers/service.order.controller.js";
+import {
+  createRefundRequest,
+  getRefundRequestsForOrder,
+  updateRefundRequest,
+  deleteRefundRequest,
+} from "../controllers/refund-request.controller.js";
+import { getCustomerNotifications } from "../controllers/notification.controller.js";
 
 const router = express.Router();
 
@@ -47,5 +56,14 @@ router.get("/service-orders", getCustomerServiceOrders);
 router.get("/service-orders/:id", getServiceOrderById);
 router.post("/service-orders/:id/payment", processPayment);
 router.post("/payments/:paymentId/process", processPaymentById);
+router.patch("/service-orders/:id/deliver", markOrderAsDelivered);
+router.post("/service-orders/:orderId/refunds", createRefundRequest);
+router.get("/service-orders/:orderId/refunds", getRefundRequestsForOrder);
+router.patch("/refunds/:refundId", updateRefundRequest);
+router.delete("/refunds/:refundId", deleteRefundRequest);
+
+// Notifications
+router.get("/notifications", getCustomerNotifications);
+router.patch("/notifications/:id/read", markNotificationAsRead);
 
 export default router;

@@ -12,7 +12,7 @@ class ApiClient {
   late final Dio _dio;
 
   // Adjust this base URL to your actual backend server URL
-  static const String baseUrl = 'http://192.168.100.75:5000/api/v1';
+  static const String baseUrl = 'http://localhost:5000/api/v1';
 
   // Singleton pattern
   factory ApiClient() => _instance;

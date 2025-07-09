@@ -30,6 +30,10 @@ const Expert = sequelize.define("expert", {
     type: DataTypes.BOOLEAN,
     defaultValue: false,
   },
+  is_active: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false,
+  },
 });
 
 export default Expert;

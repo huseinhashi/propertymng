@@ -42,7 +42,8 @@ export const getAllExperts = async (req, res, next) => {
 // Create a new expert
 export const createExpert = async (req, res, next) => {
   try {
-    const { full_name, email, password, service_type_ids, address } = req.body;
+    const { full_name, email, password, service_type_ids, address, is_active } =
+      req.body;
 
     const existingExpert = await Expert.findOne({ where: { email } });
     if (existingExpert) {
@@ -63,6 +64,7 @@ export const createExpert = async (req, res, next) => {
           email,
           password_hash: hashedPassword, // Hashing should be implemented
           address,
+          is_active: is_active === true,
         },
         { transaction }
       );
@@ -102,7 +104,8 @@ export const createExpert = async (req, res, next) => {
 export const updateExpert = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { full_name, email, password, service_type_ids, address } = req.body;
+    const { full_name, email, password, service_type_ids, address, is_active } =
+      req.body;
 
     const expert = await Expert.findByPk(id);
     if (!expert) {
@@ -133,6 +136,9 @@ export const updateExpert = async (req, res, next) => {
       expert.address = address || expert.address;
       if (password) {
         expert.password_hash = hashedPassword; // Hashing should be implemented
+      }
+      if (typeof is_active === "boolean") {
+        expert.is_active = is_active;
       }
 
       await expert.save({ transaction });

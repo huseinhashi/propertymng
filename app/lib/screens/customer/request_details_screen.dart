@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:app/services/repair_service.dart';
 import 'package:intl/intl.dart';
+import 'package:app/screens/customer/customer_dashboard.dart';
 
 class RequestDetailsScreen extends StatefulWidget {
   final int requestId;
@@ -88,12 +89,22 @@ class _RequestDetailsScreenState extends State<RequestDetailsScreen> {
               backgroundColor: Colors.green,
             ),
           );
-          // Navigate to orders screen after successful bid acceptance
+          // Instead of pushing OrdersScreen directly, pop to root and set tab
           if (!mounted) return;
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const OrdersScreen()),
-          );
+          Navigator.popUntil(context, (route) => route.isFirst);
+          // Use a short delay to ensure popUntil completes, then set tab
+          Future.delayed(Duration(milliseconds: 100), () {
+            // Use an InheritedWidget, Provider, or a global key to set the tab in CustomerDashboardScreen
+            // For now, send a navigation argument
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (context) => CustomerDashboardScreen(),
+                settings: RouteSettings(
+                    arguments: {'selectedTab': 2}), // 2 = Orders tab
+              ),
+            );
+          });
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(

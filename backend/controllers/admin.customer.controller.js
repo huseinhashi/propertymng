@@ -30,7 +30,7 @@ export const getAllCustomers = async (req, res, next) => {
 // Create a new customer
 export const createCustomer = async (req, res, next) => {
   try {
-    const { name, phone, address, password } = req.body;
+    const { name, phone, address, password, is_active } = req.body;
     const hashedPassword = await bcrypt.hash(password, 10);
 
     const existingCustomer = await Customer.findOne({ where: { phone } });
@@ -46,6 +46,7 @@ export const createCustomer = async (req, res, next) => {
       phone,
       address,
       password_hash: hashedPassword, // Hashing should be implemented in the model or middleware
+      is_active: is_active === true,
     });
 
     res.status(201).json({
@@ -62,7 +63,7 @@ export const createCustomer = async (req, res, next) => {
 export const updateCustomer = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { name, phone, address, password } = req.body;
+    const { name, phone, address, password, is_active } = req.body;
     const hashedPassword = await bcrypt.hash(password, 10);
     const customer = await Customer.findByPk(id);
     if (!customer) {
@@ -87,6 +88,9 @@ export const updateCustomer = async (req, res, next) => {
     customer.address = address || customer.address;
     if (password) {
       customer.password_hash = hashedPassword; // Hashing should be implemented
+    }
+    if (typeof is_active === "boolean") {
+      customer.is_active = is_active;
     }
 
     await customer.save();

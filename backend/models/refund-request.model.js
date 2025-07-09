@@ -29,6 +29,10 @@ const RefundRequest = sequelize.define("refund_request", {
   decided_at: {
     type: DataTypes.DATE,
   },
+  customer_id: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+  },
 });
 
 export default RefundRequest;

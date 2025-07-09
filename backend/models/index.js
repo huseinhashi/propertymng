@@ -11,6 +11,7 @@ import Payment from "./payment.model.js";
 import Payout from "./payout.model.js";
 import RefundRequest from "./refund-request.model.js";
 import Rating from "./rating.model.js";
+import Notification from "./notification.model.js";
 
 // Relationships
 // Many-to-many relationship between Expert and ServiceType
@@ -91,4 +92,5 @@ export {
   Payout,
   RefundRequest,
   Rating,
+  Notification,
 };

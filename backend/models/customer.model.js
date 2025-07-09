@@ -23,6 +23,10 @@ const Customer = sequelize.define("customer", {
     type: DataTypes.STRING,
     allowNull: false,
   },
+  is_active: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false,
+  },
 });
 
 export default Customer;

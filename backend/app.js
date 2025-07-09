@@ -6,7 +6,6 @@ import db, { connectDB } from "./database/db.js";
 import syncDatabase from "./database/sync.js";
 import authRouter from "./routes/auth.routes.js";
 import serviceTypeRoutes from "./routes/service-type.routes.js";
-// import seed from "./database/seed.js";
 import adminRouter from "./routes/admin.routes.js";
 import customerRouter from "./routes/customer.routes.js";
 import expertRouter from "./routes/expert.routes.js";
@@ -14,6 +13,7 @@ import { fileURLToPath } from "url";
 import path from "path";
 
 import errorMiddleware from "./middlewares/error.middleware.js";
+import { seedAdminIfNoneExists } from "./database/seed.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -56,15 +56,15 @@ app.get("/", (req, res) => {
 });
 const server = app.listen(PORT, async () => {
   try {
-    await connectDB(); // Test the database connection
-    await syncDatabase(); // Call the function to sync the database
-    // seed; // Seed the database with initial data
+    await connectDB();
+    await syncDatabase();
+    await seedAdminIfNoneExists(); // Call the function after syncing
     console.log(
       `Property Management API is running on http://localhost:${PORT}`
     );
   } catch (error) {
     console.error("Failed to connect to the database:", error.message);
-    process.exit(1); // Exit the process if the database connection fails
+    process.exit(1);
   }
 });
 

@@ -4,6 +4,8 @@ import ServiceOrder from "../models/service-order.model.js";
 import Payment from "../models/payment.model.js";
 import sequelize from "../database/db.js";
 import { Op } from "sequelize";
+import Expert from "../models/expert.model.js";
+import Notification from "../models/notification.model.js";
 
 // Accept a bid (customer action)
 export const acceptBid = async (req, res, next) => {
@@ -147,6 +149,16 @@ export const acceptBid = async (req, res, next) => {
         },
       },
     });
+    //send notification to expert
+    const expert = await Expert.findByPk(bid.expert_id);
+    if (expert) {
+      await Notification.create({
+        user_id: expert.expert_id,
+        user_type: "expert",
+        title: "New Bid Accepted",
+        message: `Your bid has been accepted by the customer.`,
+      });
+    }
   } catch (error) {
     await transaction.rollback();
     next(error);

@@ -25,10 +25,10 @@ export const ExpertsPage = () => {
   const [formData, setFormData] = useState({
     full_name: "",
     email: "",
-    phone: "",
     service_type_ids: [],
     address: "",
     password: "",
+    is_active: false,
   });
   const { toast } = useToast();
   const [errors, setErrors] = useState({});
@@ -139,10 +139,10 @@ export const ExpertsPage = () => {
     setFormData({
       full_name: "",
       email: "",
-      phone: "",
       service_type_ids: [],
       address: "",
       password: "",
+      is_active: false,
     });
     setIsAddDialogOpen(true);
   };
@@ -152,10 +152,10 @@ export const ExpertsPage = () => {
     setFormData({
       full_name: expert.full_name,
       email: expert.email,
-      phone: expert.phone,
       service_type_ids: expert.service_types ? expert.service_types.map(st => st.service_type_id) : [],
       address: expert.address,
       password: "", // Don't populate password in edit mode
+      is_active: expert.is_active,
     });
     setIsEditDialogOpen(true);
   };
@@ -166,10 +166,10 @@ export const ExpertsPage = () => {
   };
 
   const handleInputChange = (e) => {
-    const { name, value } = e.target;
+    const { name, value, type, checked } = e.target;
     setFormData((prev) => ({
       ...prev,
-      [name]: value,
+      [name]: type === "checkbox" ? checked : value,
     }));
   };
 
@@ -230,14 +230,6 @@ export const ExpertsPage = () => {
       isValid = false;
     } else if (!/^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/.test(formData.email)) {
       newErrors.email = "Please enter a valid email address";
-      isValid = false;
-    }
-
-    if (!formData.phone) {
-      newErrors.phone = "Phone is required";
-      isValid = false;
-    } else if (!/^252[0-9]{9}$/.test(formData.phone)) {
-      newErrors.phone = "Phone number must start with 252 followed by 9 digits";
       isValid = false;
     }
 
@@ -473,23 +465,6 @@ export const ExpertsPage = () => {
               )}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="phone" className={cn(errors.phone && "text-destructive")}>
-                Phone *
-              </Label>
-              <Input
-                id="phone"
-                name="phone"
-                value={formData.phone}
-                onChange={handlePhoneChange}
-                placeholder="252xxxxxxxxx"
-                maxLength={12}
-                className={cn(errors.phone && "border-destructive focus-visible:ring-destructive")}
-              />
-              {errors.phone && (
-                <p className="text-sm text-destructive">{errors.phone}</p>
-              )}
-            </div>
-            <div className="space-y-2">
               <Label htmlFor="address" className={cn(errors.address && "text-destructive")}>
                 Address *
               </Label>
@@ -522,7 +497,17 @@ export const ExpertsPage = () => {
                 <p className="text-sm text-destructive">{errors.password}</p>
               )}
             </div>
-         
+            <div className="space-y-2">
+              <Label htmlFor="is_active">Active</Label>
+              <input
+                id="is_active"
+                name="is_active"
+                type="checkbox"
+                checked={formData.is_active}
+                onChange={handleInputChange}
+                className="h-4 w-4"
+              />
+            </div>
             <div className="flex justify-end gap-2">
               <Button
                 type="button"
@@ -578,23 +563,6 @@ export const ExpertsPage = () => {
               />
               {errors.email && (
                 <p className="text-sm text-destructive">{errors.email}</p>
-              )}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-phone" className={cn(errors.phone && "text-destructive")}>
-                Phone *
-              </Label>
-              <Input
-                id="edit-phone"
-                name="phone"
-                value={formData.phone}
-                onChange={handlePhoneChange}
-                placeholder="252xxxxxxxxx"
-                maxLength={12}
-                className={cn(errors.phone && "border-destructive focus-visible:ring-destructive")}
-              />
-              {errors.phone && (
-                <p className="text-sm text-destructive">{errors.phone}</p>
               )}
             </div>
             <div className="space-y-2">
@@ -663,6 +631,17 @@ export const ExpertsPage = () => {
               {errors.service_type_ids && (
                 <p className="text-sm text-destructive">{errors.service_type_ids}</p>
               )}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="is_active">Active</Label>
+              <input
+                id="is_active"
+                name="is_active"
+                type="checkbox"
+                checked={formData.is_active}
+                onChange={handleInputChange}
+                className="h-4 w-4"
+              />
             </div>
             <div className="flex justify-end gap-2">
               <Button

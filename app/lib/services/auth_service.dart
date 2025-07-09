@@ -1,5 +1,6 @@
 // lib/services/auth_service.dart
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:app/services/api_client.dart';
@@ -39,7 +40,15 @@ class AuthService {
       // Parse stored user data if available
       final userDataString = prefs.getString('userData');
       if (userDataString != null) {
-        // You would implement parsing here if needed
+        try {
+          // Parse the stored user data
+          final Map<String, dynamic> parsedData = jsonDecode(userDataString);
+          _userData = parsedData;
+        } catch (e) {
+          if (kDebugMode) {
+            print('Error parsing stored user data: $e');
+          }
+        }
       }
 
       if (_token != null) {
@@ -189,7 +198,7 @@ class AuthService {
 
     // Save user data as well
     if (_userData != null) {
-      // Implement storing userData in SharedPreferences here
+      await prefs.setString('userData', jsonEncode(_userData));
     }
 
     // Notify listeners

@@ -102,6 +102,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        automaticallyImplyLeading: false,
         title: Text(
           'My Orders',
           style: GoogleFonts.poppins(
@@ -340,7 +341,10 @@ class _OrdersScreenState extends State<OrdersScreen> {
                                       : order['payment_status'] ==
                                               'partially_paid'
                                           ? 'Partially Paid'
-                                          : 'Unpaid',
+                                          : order['payment_status'] ==
+                                                  'refunded'
+                                              ? 'Refunded'
+                                              : 'Unpaid',
                                   style: GoogleFonts.poppins(
                                     fontSize: 13,
                                     fontWeight: FontWeight.w500,
@@ -350,7 +354,10 @@ class _OrdersScreenState extends State<OrdersScreen> {
                                             : order['payment_status'] ==
                                                     'partially_paid'
                                                 ? Colors.orange
-                                                : Colors.red,
+                                                : order['payment_status'] ==
+                                                        'refunded'
+                                                    ? Colors.red
+                                                    : Colors.red,
                                   ),
                                 ),
                               ],

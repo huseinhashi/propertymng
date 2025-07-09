@@ -23,11 +23,15 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
   String? _error;
   Map<String, dynamic>? _orderDetails;
   bool _processingPayment = false;
+  Map<String, dynamic>? _refundStatus;
+  List<Map<String, dynamic>> _refunds = [];
+  bool _isLoadingRefunds = false;
 
   @override
   void initState() {
     super.initState();
     _fetchOrderDetails();
+    _fetchRefunds();
   }
 
   Future<void> _fetchOrderDetails() async {
@@ -51,6 +55,25 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
       setState(() {
         _isLoading = false;
         _error = 'Error: $e';
+      });
+    }
+  }
+
+  Future<void> _fetchRefunds() async {
+    setState(() {
+      _isLoadingRefunds = true;
+    });
+    final response =
+        await _repairService.getRefundRequestsForOrder(widget.orderId);
+    if (response['success'] == true && response['data'] != null) {
+      setState(() {
+        _refunds = List<Map<String, dynamic>>.from(response['data']);
+        _refundStatus = _refunds.isNotEmpty ? _refunds.last : null;
+        _isLoadingRefunds = false;
+      });
+    } else {
+      setState(() {
+        _isLoadingRefunds = false;
       });
     }
   }
@@ -405,6 +428,9 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
 
             const SizedBox(height: 20),
 
+            // // Mark as Delivered and Refund buttons (if completed)
+            // _buildRefundSection(),
+
             // Payment summary section
             Card(
               elevation: 2,
@@ -591,6 +617,9 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
               ),
             ],
 
+            // Refunds section (moved here after payments)
+            _buildRefundSection(),
+
             const SizedBox(height: 30),
 
             // Info message about pending payments
@@ -694,5 +723,296 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
       }
     }
     return 0.0;
+  }
+
+  Future<void> _showRefundDialog({Map<String, dynamic>? refund}) async {
+    final TextEditingController reasonController =
+        TextEditingController(text: refund?['reason'] ?? '');
+    final amount = _orderDetails?['total_price']?.toString() ?? '';
+    final isUpdate = refund != null;
+    final formKey = GlobalKey<FormState>();
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text(isUpdate ? 'Update Refund Request' : 'Request Refund',
+              style: GoogleFonts.poppins()),
+          content: Form(
+            key: formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextFormField(
+                  initialValue: amount,
+                  enabled: false,
+                  decoration: InputDecoration(labelText: 'Amount'),
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: reasonController,
+                  decoration: InputDecoration(labelText: 'Reason'),
+                  maxLines: 3,
+                  validator: (v) =>
+                      v == null || v.isEmpty ? 'Reason required' : null,
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: Text('Cancel', style: GoogleFonts.poppins()),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                if (formKey.currentState!.validate()) {
+                  if (isUpdate) {
+                    final resp = await _repairService.updateRefundRequest(
+                        refundId: refund!['refund_id'],
+                        reason: reasonController.text);
+                    if (resp['success'] == true) {
+                      Navigator.pop(context, true);
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text(resp['message'] ?? 'Failed')));
+                    }
+                  } else {
+                    final resp = await _repairService.createRefundRequest(
+                        orderId: widget.orderId, reason: reasonController.text);
+                    if (resp['success'] == true) {
+                      Navigator.pop(context, true);
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text(resp['message'] ?? 'Failed')));
+                    }
+                  }
+                }
+              },
+              child: Text(isUpdate ? 'Update' : 'Submit',
+                  style: GoogleFonts.poppins()),
+            ),
+          ],
+        );
+      },
+    );
+    if (result == true) {
+      _fetchRefunds();
+      _fetchOrderDetails();
+    }
+  }
+
+  Widget _buildRefundSection() {
+    if (_isLoadingRefunds) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    final hasRefund = _refunds.isNotEmpty;
+    final latestRefund = hasRefund ? _refunds.last : null;
+    final refundStatus = latestRefund != null ? latestRefund['status'] : null;
+    final isRefundDisabled =
+        refundStatus == 'requested' || refundStatus == 'approved';
+    final isDeliveredDisabled = isRefundDisabled;
+    Color _getRefundStatusColor(String? status) {
+      switch (status) {
+        case 'approved':
+          return Colors.green;
+        case 'requested':
+          return Colors.orange;
+        case 'rejected':
+          return Colors.red;
+        default:
+          return Colors.grey;
+      }
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 20),
+        Text(
+          'Refunds',
+          style: GoogleFonts.poppins(
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+            color: textPrimaryColor,
+          ),
+        ),
+        const SizedBox(height: 12),
+        if (_refunds.isEmpty)
+          Card(
+            elevation: 1,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Text(
+                'No refund requests yet.',
+                style: GoogleFonts.poppins(
+                    fontSize: 14, color: textSecondaryColor),
+              ),
+            ),
+          ),
+        if (_refunds.isNotEmpty)
+          ListView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: _refunds.length,
+            itemBuilder: (context, idx) {
+              final refund = _refunds[idx];
+              final statusColor = _getRefundStatusColor(refund['status']);
+              return Card(
+                elevation: 2,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  side:
+                      BorderSide(color: statusColor.withOpacity(0.3), width: 1),
+                ),
+                margin: const EdgeInsets.only(bottom: 12),
+                child: ListTile(
+                  contentPadding: const EdgeInsets.all(16),
+                  leading: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: statusColor.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(
+                      refund['status'] == 'approved'
+                          ? Icons.check_circle_outline
+                          : refund['status'] == 'requested'
+                              ? Icons.pending_actions
+                              : Icons.cancel_outlined,
+                      color: statusColor,
+                    ),
+                  ),
+                  title: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Refund #${refund['refund_id']}',
+                        style: GoogleFonts.poppins(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color: textPrimaryColor,
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: statusColor.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(20),
+                          border:
+                              Border.all(color: statusColor.withOpacity(0.5)),
+                        ),
+                        child: Text(
+                          refund['status'].toString().toUpperCase(),
+                          style: GoogleFonts.poppins(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                            color: statusColor,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  subtitle: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SizedBox(height: 6),
+                      Text('Amount: ${refund['amount']}',
+                          style: GoogleFonts.poppins(fontSize: 14)),
+                      if (refund['reason'] != null &&
+                          refund['reason'].toString().isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 4),
+                          child: Text('Reason: ${refund['reason']}',
+                              style: GoogleFonts.poppins(
+                                  fontSize: 13, color: textSecondaryColor)),
+                        ),
+                      if (refund['decision_notes'] != null &&
+                          refund['decision_notes'].toString().isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 4),
+                          child: Text(
+                              'Admin Notes: ${refund['decision_notes']}',
+                              style: GoogleFonts.poppins(
+                                  fontSize: 13, color: textSecondaryColor)),
+                        ),
+                      if (refund['decided_at'] != null)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 4),
+                          child: Text(
+                              'Decided at: ${_formatDate(refund['decided_at'])}',
+                              style: GoogleFonts.poppins(
+                                  fontSize: 12, color: textSecondaryColor)),
+                        ),
+                    ],
+                  ),
+                  trailing: refund['status'] == 'requested'
+                      ? Row(mainAxisSize: MainAxisSize.min, children: [
+                          IconButton(
+                            icon: Icon(Icons.edit, color: Colors.blue),
+                            onPressed: () => _showRefundDialog(refund: refund),
+                            tooltip: 'Edit',
+                          ),
+                          IconButton(
+                            icon: Icon(Icons.delete, color: Colors.red),
+                            onPressed: () async {
+                              final resp = await _repairService
+                                  .deleteRefundRequest(refund['refund_id']);
+                              if (resp['success'] == true) {
+                                _fetchRefunds();
+                                _fetchOrderDetails();
+                              } else {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                        content:
+                                            Text(resp['message'] ?? 'Failed')));
+                              }
+                            },
+                            tooltip: 'Delete',
+                          ),
+                        ])
+                      : null,
+                ),
+              );
+            },
+          ),
+        const SizedBox(height: 12),
+        if (!isRefundDisabled && _orderDetails!['status'] == 'completed')
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: () => _showRefundDialog(),
+              child: Text('Request Refund'),
+            ),
+          ),
+        const SizedBox(height: 12),
+        if (!isDeliveredDisabled && _orderDetails!['status'] == 'completed')
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: () async {
+                final response =
+                    await _repairService.markOrderAsDelivered(widget.orderId);
+                if (response['success'] == true) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Order marked as delivered')),
+                  );
+                  _fetchOrderDetails();
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                        content: Text(response['message'] ??
+                            'Failed to mark as delivered')),
+                  );
+                }
+              },
+              child: Text('Mark as Delivered'),
+            ),
+          ),
+      ],
+    );
   }
 }

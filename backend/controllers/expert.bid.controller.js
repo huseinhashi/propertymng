@@ -6,6 +6,7 @@ import ServiceType from "../models/service-type.model.js";
 import ServiceImage from "../models/service-image.model.js";
 import sequelize from "../database/db.js";
 import { Op } from "sequelize";
+import Notification from "../models/notification.model.js";
 
 // Get all bids for the authenticated expert
 export const getMyBids = async (req, res, next) => {
@@ -157,6 +158,19 @@ export const createBid = async (req, res, next) => {
       message: "Bid created successfully",
       data: completeBid,
     });
+
+    if (bid && bid.request_id) {
+      const request = await RepairRequest.findByPk(bid.request_id);
+      if (request) {
+        const expert = await Expert.findByPk(expertId);
+        await Notification.create({
+          user_id: request.customer_id,
+          user_type: "customer",
+          title: "New Bid Received",
+          message: `You have received a new bid from ${expert.full_name} on your request.`,
+        });
+      }
+    }
   } catch (error) {
     await transaction.rollback();
     next(error);
@@ -331,11 +345,37 @@ export const getAvailableRequests = async (req, res, next) => {
       (type) => type.service_type_id
     );
 
+    // Get repair request IDs where the expert has had refunded service orders
+    const ServiceOrder = (await import("../models/service-order.model.js"))
+      .default;
+    const refundedServiceOrders = await ServiceOrder.findAll({
+      where: {
+        status: "refunded",
+      },
+      include: [
+        {
+          model: Bid,
+          where: { expert_id: expertId },
+          attributes: ["request_id"],
+        },
+      ],
+      attributes: ["bid_id"],
+    });
+
+    // Get the request_ids from the bids of refunded service orders
+    const refundedRequestIds = refundedServiceOrders
+      .map((order) => order.bid?.request_id)
+      .filter(Boolean);
+
     // Find repair requests that are in bidding status and match the expert's service types
+    // AND exclude requests where the expert has had refunded service orders
     const availableRequests = await RepairRequest.findAll({
       where: {
         status: "bidding",
         service_type_id: { [Op.in]: serviceTypeIds },
+        ...(refundedRequestIds.length > 0 && {
+          request_id: { [Op.notIn]: refundedRequestIds },
+        }),
       },
       include: [
         { model: Customer, attributes: ["name"] },

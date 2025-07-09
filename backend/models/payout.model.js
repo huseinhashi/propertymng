@@ -30,6 +30,10 @@ const Payout = sequelize.define("payout", {
   released_at: {
     type: DataTypes.DATE,
   },
+  expert_id: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+  },
 });
 
 export default Payout;

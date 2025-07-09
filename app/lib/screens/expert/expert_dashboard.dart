@@ -8,6 +8,7 @@ import 'tabs/payouts_tab.dart';
 import 'tabs/profile_tab.dart';
 import 'package:provider/provider.dart';
 import 'package:app/providers/auth_provider.dart';
+import 'package:app/services/repair_service.dart';
 
 class ExpertDashboardScreen extends StatefulWidget {
   const ExpertDashboardScreen({Key? key}) : super(key: key);
@@ -18,6 +19,30 @@ class ExpertDashboardScreen extends StatefulWidget {
 
 class _ExpertDashboardScreenState extends State<ExpertDashboardScreen> {
   int _selectedIndex = 0;
+  List<Map<String, dynamic>> _notifications = [];
+  int _unreadCount = 0;
+  bool _loadingNotifications = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchNotifications();
+  }
+
+  Future<void> _fetchNotifications() async {
+    setState(() => _loadingNotifications = true);
+    final notifications = await RepairService().getExpertNotifications();
+    setState(() {
+      _notifications = notifications;
+      _unreadCount = notifications.where((n) => n['is_read'] == false).length;
+      _loadingNotifications = false;
+    });
+  }
+
+  Future<void> _markAsRead(int notificationId) async {
+    await RepairService().markExpertNotificationAsRead(notificationId);
+    await _fetchNotifications();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -26,6 +51,7 @@ class _ExpertDashboardScreenState extends State<ExpertDashboardScreen> {
     return Scaffold(
       appBar: AppBar(
         elevation: 0,
+        automaticallyImplyLeading: false,
         backgroundColor: surfaceColor,
         title: Row(
           children: [
@@ -41,15 +67,88 @@ class _ExpertDashboardScreenState extends State<ExpertDashboardScreen> {
           ],
         ),
         actions: [
-          IconButton(
-            icon: CircleAvatar(
-              backgroundColor: primaryColor.withOpacity(0.1),
-              child: Icon(Icons.notifications_outlined,
-                  color: primaryColor, size: 20),
-            ),
-            onPressed: () {
-              // Show notifications
-            },
+          Stack(
+            children: [
+              IconButton(
+                icon: CircleAvatar(
+                  backgroundColor: primaryColor.withOpacity(0.1),
+                  child: Icon(Icons.notifications_outlined,
+                      color: primaryColor, size: 20),
+                ),
+                onPressed: _loadingNotifications
+                    ? null
+                    : () {
+                        showDialog(
+                          context: context,
+                          builder: (context) => AlertDialog(
+                            title: Text('Notifications'),
+                            content: SizedBox(
+                              width: 350,
+                              child: _loadingNotifications
+                                  ? Center(child: CircularProgressIndicator())
+                                  : _notifications.isEmpty
+                                      ? Text('No notifications')
+                                      : ListView.builder(
+                                          shrinkWrap: true,
+                                          itemCount: _notifications.length,
+                                          itemBuilder: (context, i) {
+                                            final n = _notifications[i];
+                                            return ListTile(
+                                              title: Text(n['title'] ?? ''),
+                                              subtitle:
+                                                  Text(n['message'] ?? ''),
+                                              trailing: n['is_read']
+                                                  ? null
+                                                  : IconButton(
+                                                      icon: Icon(Icons
+                                                          .mark_email_read),
+                                                      tooltip: 'Mark as read',
+                                                      onPressed: () async {
+                                                        await _markAsRead(n[
+                                                            'notification_id']);
+                                                        Navigator.of(context)
+                                                            .pop();
+                                                      },
+                                                    ),
+                                              leading: n['is_read']
+                                                  ? Icon(Icons.notifications,
+                                                      color: Colors.grey)
+                                                  : Icon(
+                                                      Icons
+                                                          .notifications_active,
+                                                      color: primaryColor),
+                                              dense: true,
+                                            );
+                                          },
+                                        ),
+                            ),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.of(context).pop(),
+                                child: Text('Close'),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+              ),
+              if (_unreadCount > 0)
+                Positioned(
+                  right: 8,
+                  top: 8,
+                  child: Container(
+                    padding: EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      color: Colors.red,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Text(
+                      '$_unreadCount',
+                      style: TextStyle(color: Colors.white, fontSize: 12),
+                    ),
+                  ),
+                ),
+            ],
           ),
           const SizedBox(width: 8),
           Padding(

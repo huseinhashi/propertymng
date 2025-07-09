@@ -401,6 +401,50 @@ class RepairService {
     }
   }
 
+  // Update an additional payment (for experts)
+  Future<Map<String, dynamic>> updateAdditionalPayment({
+    required int orderId,
+    required int paymentId,
+    required double amount,
+    required String reason,
+  }) async {
+    try {
+      final response = await _apiClient.request(
+        method: 'PATCH',
+        path: '/expert/service-orders/$orderId/additional-payment/$paymentId',
+        data: {
+          'amount': amount,
+          'reason': reason,
+        },
+      );
+      return response;
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'Error updating additional payment: $e',
+      };
+    }
+  }
+
+  // Delete an additional payment (for experts)
+  Future<Map<String, dynamic>> deleteAdditionalPayment({
+    required int orderId,
+    required int paymentId,
+  }) async {
+    try {
+      final response = await _apiClient.request(
+        method: 'DELETE',
+        path: '/expert/service-orders/$orderId/additional-payment/$paymentId',
+      );
+      return response;
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'Error deleting additional payment: $e',
+      };
+    }
+  }
+
   // Get expert's service order details by ID
   Future<Map<String, dynamic>> expertGetServiceOrderById(int orderId) async {
     try {
@@ -415,6 +459,166 @@ class RepairService {
         'success': false,
         'message': 'Error fetching service order details: $e',
       };
+    }
+  }
+
+  // Mark a service order as delivered (for customers)
+  Future<Map<String, dynamic>> markOrderAsDelivered(int orderId) async {
+    try {
+      final response = await _apiClient.request(
+        method: 'PATCH',
+        path: '/customer/service-orders/$orderId/deliver',
+      );
+      return response;
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'Error marking as delivered: $e',
+      };
+    }
+  }
+
+  // Create a refund request (customer)
+  Future<Map<String, dynamic>> createRefundRequest(
+      {required int orderId, required String reason}) async {
+    try {
+      final response = await _apiClient.request(
+        method: 'POST',
+        path: '/customer/service-orders/$orderId/refunds',
+        data: {'reason': reason},
+      );
+      return response;
+    } catch (e) {
+      return {'success': false, 'message': 'Error creating refund request: $e'};
+    }
+  }
+
+  // Get refund requests for a service order
+  Future<Map<String, dynamic>> getRefundRequestsForOrder(int orderId) async {
+    try {
+      final response = await _apiClient.request(
+        method: 'GET',
+        path: '/customer/service-orders/$orderId/refunds',
+      );
+      return response;
+    } catch (e) {
+      return {'success': false, 'message': 'Error fetching refunds: $e'};
+    }
+  }
+
+  // Update a refund request
+  Future<Map<String, dynamic>> updateRefundRequest(
+      {required int refundId, required String reason}) async {
+    try {
+      final response = await _apiClient.request(
+        method: 'PATCH',
+        path: '/customer/refunds/$refundId',
+        data: {'reason': reason},
+      );
+      return response;
+    } catch (e) {
+      return {'success': false, 'message': 'Error updating refund: $e'};
+    }
+  }
+
+  // Delete a refund request
+  Future<Map<String, dynamic>> deleteRefundRequest(int refundId) async {
+    try {
+      final response = await _apiClient.request(
+        method: 'DELETE',
+        path: '/customer/refunds/$refundId',
+      );
+      return response;
+    } catch (e) {
+      return {'success': false, 'message': 'Error deleting refund: $e'};
+    }
+  }
+
+  // Get expert payouts
+  Future<Map<String, dynamic>> getExpertPayouts() async {
+    try {
+      final response = await _apiClient.request(
+        method: 'GET',
+        path: '/expert/payouts',
+      );
+      return response;
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'Error fetching payouts: $e',
+      };
+    }
+  }
+
+  // Get refund requests for a service order (expert)
+  Future<Map<String, dynamic>> getExpertRefundRequestsForOrder(
+      int orderId) async {
+    try {
+      final response = await _apiClient.request(
+        method: 'GET',
+        path: '/expert/service-orders/$orderId/refunds',
+      );
+      return response;
+    } catch (e) {
+      return {'success': false, 'message': 'Error fetching refunds: $e'};
+    }
+  }
+
+  // Fetch notifications for customer
+  Future<List<Map<String, dynamic>>> getCustomerNotifications() async {
+    try {
+      final response = await _apiClient.request(
+        method: 'GET',
+        path: '/customer/notifications',
+      );
+      if (response['success']) {
+        return List<Map<String, dynamic>>.from(response['data']);
+      }
+      return [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  // Fetch notifications for expert
+  Future<List<Map<String, dynamic>>> getExpertNotifications() async {
+    try {
+      final response = await _apiClient.request(
+        method: 'GET',
+        path: '/expert/notifications',
+      );
+      if (response['success']) {
+        return List<Map<String, dynamic>>.from(response['data']);
+      }
+      return [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  // Mark notification as read (customer)
+  Future<bool> markCustomerNotificationAsRead(int notificationId) async {
+    try {
+      final response = await _apiClient.request(
+        method: 'PATCH',
+        path: '/customer/notifications/$notificationId/read',
+      );
+      return response['success'] == true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  // Mark notification as read (expert)
+  Future<bool> markExpertNotificationAsRead(int notificationId) async {
+    try {
+      final response = await _apiClient.request(
+        method: 'PATCH',
+        path: '/expert/notifications/$notificationId/read',
+      );
+      return response['success'] == true;
+    } catch (e) {
+      return false;
     }
   }
 }

@@ -7,9 +7,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { format } from "date-fns";
-import { ArrowLeft, Calendar, Banknote, Clock, CheckCircle2, ReceiptText, RefreshCw } from "lucide-react";
+import { ArrowLeft, Calendar, Banknote, Clock, CheckCircle2, ReceiptText, RefreshCw, XCircle, Edit, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import api from "@/lib/axios";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 
 export const ServiceOrderDetailsPage = () => {
   const { id } = useParams();
@@ -18,9 +20,14 @@ export const ServiceOrderDetailsPage = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
+  const [refunds, setRefunds] = useState([]);
+  const [isLoadingRefunds, setIsLoadingRefunds] = useState(true);
+  const [decisionDialog, setDecisionDialog] = useState({ open: false, refund: null, action: null });
+  const [decisionNote, setDecisionNote] = useState("");
 
   useEffect(() => {
     fetchServiceOrderDetails();
+    fetchRefunds();
   }, [id]);
 
   const fetchServiceOrderDetails = async () => {
@@ -37,6 +44,22 @@ export const ServiceOrderDetailsPage = () => {
       navigate("/admin/service-orders");
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const fetchRefunds = async () => {
+    try {
+      setIsLoadingRefunds(true);
+      const response = await api.get(`/admin/service-orders/${id}/refunds`);
+      setRefunds(response.data.data);
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.response?.data?.message || "Failed to fetch refunds",
+      });
+    } finally {
+      setIsLoadingRefunds(false);
     }
   };
 
@@ -107,6 +130,57 @@ export const ServiceOrderDetailsPage = () => {
   const handleViewRepairRequest = () => {
     if (serviceOrder?.bid?.repair_request?.request_id) {
       navigate(`/admin/repair-requests/${serviceOrder.bid.repair_request.request_id}`);
+    }
+  };
+
+  const handleEditDecisionNote = (refund) => {
+    setDecisionNote(refund.decision_notes || "");
+    setDecisionDialog({ open: true, refund, action: "edit_note" });
+  };
+
+  const handleApproveRefund = (refundId) => {
+    setDecisionNote("");
+    setDecisionDialog({ open: true, refund: { refund_id: refundId }, action: "approve" });
+  };
+
+  const handleRejectRefund = (refundId) => {
+    setDecisionNote("");
+    setDecisionDialog({ open: true, refund: { refund_id: refundId }, action: "reject" });
+  };
+
+  const submitDecision = async () => {
+    const { refund, action } = decisionDialog;
+    try {
+      if (action === "approve" || action === "reject") {
+        await api.patch(`/admin/refunds/${refund.refund_id}/status`, { status: action === "approve" ? "approved" : "rejected", decision_notes: decisionNote });
+        toast({ title: action === "approve" ? "Approved" : "Rejected", description: `Refund ${action === "approve" ? "approved" : "rejected"}.` });
+      } else if (action === "edit_note") {
+        await api.patch(`/customer/refunds/${refund.refund_id}`, { decision_notes: decisionNote });
+        toast({ title: "Updated", description: "Decision note updated." });
+      }
+      setDecisionDialog({ open: false, refund: null, action: null });
+      fetchRefunds();
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.response?.data?.message || "Failed to update refund",
+      });
+    }
+  };
+
+  const handleDeleteRefund = async (refundId) => {
+    if (!window.confirm("Are you sure you want to delete this refund request?")) return;
+    try {
+      await api.delete(`/customer/refunds/${refundId}`);
+      toast({ title: "Deleted", description: "Refund request deleted." });
+      fetchRefunds();
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.response?.data?.message || "Failed to delete refund",
+      });
     }
   };
 
@@ -358,6 +432,89 @@ export const ServiceOrderDetailsPage = () => {
           )}
         </CardContent>
       </Card>
+
+      {/* Refunds Section (moved after payments) */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Refunds</CardTitle>
+          <CardDescription>All refund requests for this service order</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {isLoadingRefunds ? (
+            <div className="text-center py-4">Loading refunds...</div>
+          ) : refunds.length === 0 ? (
+            <div className="text-center py-4 text-muted-foreground">No refund requests found</div>
+          ) : (
+            <div className="space-y-4">
+              {refunds.map((refund) => {
+                let statusVariant;
+                switch (refund.status) {
+                  case "approved": statusVariant = "success"; break;
+                  case "requested": statusVariant = "warning"; break;
+                  case "rejected": statusVariant = "destructive"; break;
+                  default: statusVariant = "outline";
+                }
+                return (
+                  <div key={refund.refund_id} className="flex items-center justify-between p-4 border rounded-md">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <Badge variant={statusVariant}>{refund.status.toUpperCase()}</Badge>
+                        <span className="font-medium">Refund #{refund.refund_id}</span>
+                        <span className="text-sm text-muted-foreground">Order #{refund.service_order_id}</span>
+                      </div>
+                      <p className="text-sm text-muted-foreground mt-1">Amount: ${parseFloat(refund.amount).toFixed(2)}</p>
+                      {refund.reason && <p className="text-sm text-muted-foreground mt-1">Reason: {refund.reason}</p>}
+                      {refund.decision_notes && <p className="text-sm text-muted-foreground mt-1">Admin Notes: {refund.decision_notes}</p>}
+                      {refund.decided_at && <p className="text-xs text-muted-foreground mt-1">Decided at: {formatDate(refund.decided_at)}</p>}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button variant="ghost" size="icon" onClick={() => handleEditDecisionNote(refund)} title="Edit Decision Note" disabled={!refund.decision_notes}>
+                        <Edit className="h-4 w-4 text-purple-600" />
+                      </Button>
+                      {refund.status === "requested" && (
+                        <>
+                          <Button variant="outline" size="sm" className="text-green-600 border-green-600" onClick={() => handleApproveRefund(refund.refund_id)}>
+                            <CheckCircle2 className="h-4 w-4 mr-1" /> Approve
+                          </Button>
+                          <Button variant="outline" size="sm" className="text-red-600 border-red-600" onClick={() => handleRejectRefund(refund.refund_id)}>
+                            <XCircle className="h-4 w-4 mr-1" /> Reject
+                          </Button>
+                          <Button variant="ghost" size="icon" onClick={() => handleDeleteRefund(refund.refund_id)} title="Delete Refund">
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+      <Dialog open={decisionDialog.open} onOpenChange={open => setDecisionDialog(d => ({ ...d, open }))}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {decisionDialog.action === "approve"
+                ? "Approve Refund"
+                : decisionDialog.action === "reject"
+                ? "Reject Refund"
+                : "Edit Decision Note"}
+            </DialogTitle>
+          </DialogHeader>
+          <Textarea
+            value={decisionNote}
+            onChange={e => setDecisionNote(e.target.value)}
+            placeholder="Enter decision note (optional)"
+            rows={4}
+          />
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDecisionDialog({ open: false, refund: null, action: null })}>Cancel</Button>
+            <Button onClick={submitDecision}>Submit</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }; 

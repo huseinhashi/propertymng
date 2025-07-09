@@ -93,261 +93,267 @@ class _BidsTabState extends State<BidsTab> {
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoading) {
-      return const Center(child: CircularProgressIndicator());
-    }
-
-    if (_error != null) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.error_outline, size: 48, color: Colors.red[300]),
-            const SizedBox(height: 16),
-            Text(
-              'Error loading bids',
-              style: GoogleFonts.poppins(
-                fontSize: 16,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              _error!,
-              style: GoogleFonts.poppins(
-                fontSize: 14,
-                color: Colors.grey[600],
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 24),
-            ElevatedButton(
-              onPressed: _fetchBids,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: primaryColor,
-                foregroundColor: Colors.white,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-              child: Text('Try Again', style: GoogleFonts.poppins()),
-            ),
-          ],
-        ),
-      );
-    }
-
-    if (_bids.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.gavel_outlined, size: 64, color: Colors.grey[400]),
-            const SizedBox(height: 16),
-            Text(
-              'No bids yet',
-              style: GoogleFonts.poppins(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'You have not placed any bids on repair requests.',
-              style: GoogleFonts.poppins(
-                fontSize: 14,
-                color: Colors.grey[600],
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      );
-    }
-
     return RefreshIndicator(
       onRefresh: _fetchBids,
-      child: ListView.builder(
-        padding: const EdgeInsets.all(20),
-        itemCount: _bids.length,
-        itemBuilder: (context, index) {
-          final bid = _bids[index];
-          final repairRequest = bid['repair_request'];
-          final requestTitle =
-              repairRequest?['description'] ?? 'No description';
-          final isBidding = repairRequest?['status'] == 'bidding';
-
-          return Card(
-            margin: const EdgeInsets.only(bottom: 16),
-            elevation: 2,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Column(
-              children: [
-                ListTile(
-                  contentPadding: const EdgeInsets.all(16),
-                  title: Text(
-                    requestTitle.length > 50
-                        ? '${requestTitle.substring(0, 50)}...'
-                        : requestTitle,
-                    style: GoogleFonts.poppins(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  subtitle: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+      child: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : _error != null
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const SizedBox(height: 8),
-                      Row(
-                        children: [
-                          Icon(Icons.attach_money,
-                              size: 16, color: primaryColor),
-                          const SizedBox(width: 4),
-                          Text(
-                            '\$${bid['cost']}',
-                            style: GoogleFonts.poppins(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w500,
-                              color: primaryColor,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Icon(Icons.calendar_today,
-                              size: 16, color: Colors.grey[600]),
-                          const SizedBox(width: 4),
-                          Text(
-                            'Due: ${_formatDate(bid['deadline'])}',
-                            style: GoogleFonts.poppins(
-                              fontSize: 13,
-                              color: Colors.grey[600],
-                            ),
-                          ),
-                        ],
+                      Icon(Icons.error_outline,
+                          size: 48, color: Colors.red[300]),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Error loading bids',
+                        style: GoogleFonts.poppins(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
                       const SizedBox(height: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: bid['is_accepted']
-                              ? Colors.green.withOpacity(0.1)
-                              : isBidding
-                                  ? Colors.orange.withOpacity(0.1)
-                                  : Colors.grey.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(4),
+                      Text(
+                        _error!,
+                        style: GoogleFonts.poppins(
+                          fontSize: 14,
+                          color: Colors.grey[600],
                         ),
-                        child: Text(
-                          bid['is_accepted']
-                              ? 'Accepted'
-                              : isBidding
-                                  ? 'Pending'
-                                  : 'Closed',
-                          style: GoogleFonts.poppins(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                            color: bid['is_accepted']
-                                ? Colors.green
-                                : isBidding
-                                    ? Colors.orange
-                                    : Colors.grey,
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 24),
+                      ElevatedButton(
+                        onPressed: _fetchBids,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: primaryColor,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 24, vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
                           ),
                         ),
+                        child: Text('Try Again', style: GoogleFonts.poppins()),
                       ),
                     ],
                   ),
-                  onTap: () {
-                    // Navigate to request details page
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => RequestDetailScreen(
-                          requestId: repairRequest['request_id'],
-                        ),
+                )
+              : _bids.isEmpty
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.gavel_outlined,
+                              size: 64, color: Colors.grey[400]),
+                          const SizedBox(height: 16),
+                          Text(
+                            'No bids yet',
+                            style: GoogleFonts.poppins(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'You have not placed any bids on repair requests.',
+                            style: GoogleFonts.poppins(
+                              fontSize: 14,
+                              color: Colors.grey[600],
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ],
                       ),
-                    ).then((_) => _fetchBids()); // Refresh when returning
-                  },
-                ),
-                if (isBidding && !bid['is_accepted'])
-                  Padding(
-                    padding:
-                        const EdgeInsets.only(left: 8, right: 8, bottom: 8),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        TextButton.icon(
-                          icon: const Icon(Icons.edit, size: 16),
-                          label: Text('Update',
-                              style: GoogleFonts.poppins(fontSize: 12)),
-                          onPressed: () {
-                            // Navigate to request details for updating
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => RequestDetailScreen(
-                                  requestId: repairRequest['request_id'],
-                                ),
-                              ),
-                            ).then(
-                                (_) => _fetchBids()); // Refresh when returning
-                          },
-                          style: TextButton.styleFrom(
-                            foregroundColor: primaryColor,
+                    )
+                  : ListView.builder(
+                      padding: const EdgeInsets.all(20),
+                      itemCount: _bids.length,
+                      itemBuilder: (context, index) {
+                        final bid = _bids[index];
+                        final repairRequest = bid['repair_request'];
+                        final requestTitle =
+                            repairRequest?['description'] ?? 'No description';
+                        final isBidding = repairRequest?['status'] == 'bidding';
+
+                        return Card(
+                          margin: const EdgeInsets.only(bottom: 16),
+                          elevation: 2,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
                           ),
-                        ),
-                        const SizedBox(width: 8),
-                        TextButton.icon(
-                          icon: const Icon(Icons.delete_outline, size: 16),
-                          label: Text('Withdraw',
-                              style: GoogleFonts.poppins(fontSize: 12)),
-                          onPressed: () {
-                            // Show confirmation dialog
-                            showDialog(
-                              context: context,
-                              builder: (context) => AlertDialog(
-                                title: Text('Withdraw Bid',
-                                    style: GoogleFonts.poppins(
-                                        fontWeight: FontWeight.w600)),
-                                content: Text(
-                                  'Are you sure you want to withdraw this bid? This action cannot be undone.',
-                                  style: GoogleFonts.poppins(),
-                                ),
-                                actions: [
-                                  TextButton(
-                                    onPressed: () => Navigator.pop(context),
-                                    child: Text('Cancel',
-                                        style: GoogleFonts.poppins()),
+                          child: Column(
+                            children: [
+                              ListTile(
+                                contentPadding: const EdgeInsets.all(16),
+                                title: Text(
+                                  requestTitle.length > 50
+                                      ? '${requestTitle.substring(0, 50)}...'
+                                      : requestTitle,
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
                                   ),
-                                  TextButton(
-                                    onPressed: () {
-                                      Navigator.pop(context);
-                                      _deleteBid(bid['bid_id']);
-                                    },
-                                    style: TextButton.styleFrom(
-                                      foregroundColor: Colors.red,
+                                ),
+                                subtitle: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const SizedBox(height: 8),
+                                    Row(
+                                      children: [
+                                        Icon(Icons.attach_money,
+                                            size: 16, color: primaryColor),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          '\$${bid['cost']}',
+                                          style: GoogleFonts.poppins(
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.w500,
+                                            color: primaryColor,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 12),
+                                        Icon(Icons.calendar_today,
+                                            size: 16, color: Colors.grey[600]),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          'Due: ${_formatDate(bid['deadline'])}',
+                                          style: GoogleFonts.poppins(
+                                            fontSize: 13,
+                                            color: Colors.grey[600],
+                                          ),
+                                        ),
+                                      ],
                                     ),
-                                    child: Text('Withdraw',
-                                        style: GoogleFonts.poppins()),
-                                  ),
-                                ],
+                                    const SizedBox(height: 8),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 8, vertical: 4),
+                                      decoration: BoxDecoration(
+                                        color: bid['is_accepted']
+                                            ? Colors.green.withOpacity(0.1)
+                                            : isBidding
+                                                ? Colors.orange.withOpacity(0.1)
+                                                : Colors.grey.withOpacity(0.1),
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                      child: Text(
+                                        bid['is_accepted']
+                                            ? 'Accepted'
+                                            : isBidding
+                                                ? 'Pending'
+                                                : 'Closed',
+                                        style: GoogleFonts.poppins(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w500,
+                                          color: bid['is_accepted']
+                                              ? Colors.green
+                                              : isBidding
+                                                  ? Colors.orange
+                                                  : Colors.grey,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                onTap: () {
+                                  // Navigate to request details page
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => RequestDetailScreen(
+                                        requestId: repairRequest['request_id'],
+                                      ),
+                                    ),
+                                  ).then((_) =>
+                                      _fetchBids()); // Refresh when returning
+                                },
                               ),
-                            );
-                          },
-                          style: TextButton.styleFrom(
-                            foregroundColor: Colors.red,
+                              if (isBidding && !bid['is_accepted'])
+                                Padding(
+                                  padding: const EdgeInsets.only(
+                                      left: 8, right: 8, bottom: 8),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.end,
+                                    children: [
+                                      TextButton.icon(
+                                        icon: const Icon(Icons.edit, size: 16),
+                                        label: Text('Update',
+                                            style: GoogleFonts.poppins(
+                                                fontSize: 12)),
+                                        onPressed: () {
+                                          // Navigate to request details for updating
+                                          Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (context) =>
+                                                  RequestDetailScreen(
+                                                requestId:
+                                                    repairRequest['request_id'],
+                                              ),
+                                            ),
+                                          ).then((_) =>
+                                              _fetchBids()); // Refresh when returning
+                                        },
+                                        style: TextButton.styleFrom(
+                                          foregroundColor: primaryColor,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      TextButton.icon(
+                                        icon: const Icon(Icons.delete_outline,
+                                            size: 16),
+                                        label: Text('Withdraw',
+                                            style: GoogleFonts.poppins(
+                                                fontSize: 12)),
+                                        onPressed: () {
+                                          // Show confirmation dialog
+                                          showDialog(
+                                            context: context,
+                                            builder: (context) => AlertDialog(
+                                              title: Text('Withdraw Bid',
+                                                  style: GoogleFonts.poppins(
+                                                      fontWeight:
+                                                          FontWeight.w600)),
+                                              content: Text(
+                                                'Are you sure you want to withdraw this bid? This action cannot be undone.',
+                                                style: GoogleFonts.poppins(),
+                                              ),
+                                              actions: [
+                                                TextButton(
+                                                  onPressed: () =>
+                                                      Navigator.pop(context),
+                                                  child: Text('Cancel',
+                                                      style: GoogleFonts
+                                                          .poppins()),
+                                                ),
+                                                TextButton(
+                                                  onPressed: () {
+                                                    Navigator.pop(context);
+                                                    _deleteBid(bid['bid_id']);
+                                                  },
+                                                  style: TextButton.styleFrom(
+                                                    foregroundColor: Colors.red,
+                                                  ),
+                                                  child: Text('Withdraw',
+                                                      style: GoogleFonts
+                                                          .poppins()),
+                                                ),
+                                              ],
+                                            ),
+                                          );
+                                        },
+                                        style: TextButton.styleFrom(
+                                          foregroundColor: Colors.red,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                            ],
                           ),
-                        ),
-                      ],
+                        );
+                      },
                     ),
-                  ),
-              ],
-            ),
-          );
-        },
-      ),
     );
   }
 }

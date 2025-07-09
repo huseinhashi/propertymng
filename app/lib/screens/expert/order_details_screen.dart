@@ -25,11 +25,15 @@ class _ExpertOrderDetailsScreenState extends State<ExpertOrderDetailsScreen> {
   Map<String, dynamic>? _orderDetails;
   bool _isUpdatingStatus = false;
   bool _isRequestingPayment = false;
+  // Refunds state
+  List<Map<String, dynamic>> _refunds = [];
+  bool _isLoadingRefunds = false;
 
   @override
   void initState() {
     super.initState();
     _fetchOrderDetails();
+    _fetchRefunds();
   }
 
   Future<void> _fetchOrderDetails() async {
@@ -54,6 +58,24 @@ class _ExpertOrderDetailsScreenState extends State<ExpertOrderDetailsScreen> {
       setState(() {
         _isLoading = false;
         _error = 'Error: $e';
+      });
+    }
+  }
+
+  Future<void> _fetchRefunds() async {
+    setState(() {
+      _isLoadingRefunds = true;
+    });
+    final response =
+        await _repairService.getExpertRefundRequestsForOrder(widget.orderId);
+    if (response['success'] == true && response['data'] != null) {
+      setState(() {
+        _refunds = List<Map<String, dynamic>>.from(response['data']);
+        _isLoadingRefunds = false;
+      });
+    } else {
+      setState(() {
+        _isLoadingRefunds = false;
       });
     }
   }
@@ -143,6 +165,7 @@ class _ExpertOrderDetailsScreenState extends State<ExpertOrderDetailsScreen> {
     final completedDate = _orderDetails!['completed_at'] != null
         ? _formatDate(_orderDetails!['completed_at'])
         : null;
+    final isRefunded = _orderDetails!['status'] == 'refunded';
 
     return RefreshIndicator(
       onRefresh: _fetchOrderDetails,
@@ -425,9 +448,10 @@ class _ExpertOrderDetailsScreenState extends State<ExpertOrderDetailsScreen> {
 
             const SizedBox(height: 24),
 
-            // Additional payment request section
+            // Additional payment request section (hide if refunded)
             if (_orderDetails!['status'] != 'completed' &&
-                _orderDetails!['status'] != 'delivered')
+                _orderDetails!['status'] != 'delivered' &&
+                !isRefunded)
               _buildAdditionalPaymentSection(),
 
             const SizedBox(height: 24),
@@ -435,6 +459,9 @@ class _ExpertOrderDetailsScreenState extends State<ExpertOrderDetailsScreen> {
             // Update status section
             if (_orderDetails!['status'] != 'delivered')
               _buildUpdateStatusSection(),
+
+            // Refunds section
+            _buildRefundSection(),
           ],
         ),
       ),
@@ -590,6 +617,11 @@ class _ExpertOrderDetailsScreenState extends State<ExpertOrderDetailsScreen> {
     final TextEditingController reasonController = TextEditingController();
     final _additionalPaymentFormKey = GlobalKey<FormState>();
 
+    // Get extra payments from _orderDetails
+    final List<dynamic> payments = _orderDetails?['payments'] ?? [];
+    final List<dynamic> extraPayments =
+        payments.where((p) => p['type'] == 'extra').toList();
+
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(
@@ -597,177 +629,406 @@ class _ExpertOrderDetailsScreenState extends State<ExpertOrderDetailsScreen> {
       ),
       child: Padding(
         padding: const EdgeInsets.all(16),
-        child: Form(
-          key: _additionalPaymentFormKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Request Additional Payment',
-                style: GoogleFonts.poppins(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: textPrimaryColor,
-                ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Request Additional Payment',
+              style: GoogleFonts.poppins(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: textPrimaryColor,
               ),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: amountController,
-                keyboardType: TextInputType.numberWithOptions(decimal: true),
-                decoration: InputDecoration(
-                  labelText: 'Amount (\$)',
-                  labelStyle: GoogleFonts.poppins(
-                    color: textSecondaryColor,
-                  ),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  prefixIcon: const Icon(Icons.attach_money),
-                ),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please enter an amount';
-                  }
-                  try {
-                    final amount = double.parse(value);
-                    if (amount <= 0) {
-                      return 'Amount must be greater than zero';
-                    }
-                  } catch (e) {
-                    return 'Please enter a valid number';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: reasonController,
-                decoration: InputDecoration(
-                  labelText: 'Reason for additional payment',
-                  labelStyle: GoogleFonts.poppins(
-                    color: textSecondaryColor,
-                  ),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  prefixIcon: const Icon(Icons.description),
-                ),
-                maxLines: 3,
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please provide a reason';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: _isRequestingPayment
-                      ? null
-                      : () async {
-                          if (_additionalPaymentFormKey.currentState!
-                              .validate()) {
-                            setState(() {
-                              _isRequestingPayment = true;
-                            });
-
-                            try {
-                              final response =
-                                  await _repairService.requestAdditionalPayment(
-                                orderId: widget.orderId,
-                                amount: double.parse(amountController.text),
-                                reason: reasonController.text,
-                              );
-
-                              if (!mounted) return;
-
-                              if (response['success'] == true) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                      'Additional payment request sent',
-                                      style: GoogleFonts.poppins(),
-                                    ),
-                                    backgroundColor: Colors.green,
-                                  ),
-                                );
-
-                                // Clear form
-                                amountController.clear();
-                                reasonController.clear();
-
-                                // Refresh order details
-                                _fetchOrderDetails();
-                              } else {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                      response['message'] ??
-                                          'Failed to request payment',
-                                      style: GoogleFonts.poppins(),
-                                    ),
-                                    backgroundColor: Colors.red,
-                                  ),
-                                );
-                              }
-                            } catch (e) {
-                              if (!mounted) return;
-
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text(
-                                    'Error: $e',
-                                    style: GoogleFonts.poppins(),
-                                  ),
-                                  backgroundColor: Colors.red,
-                                ),
-                              );
-                            } finally {
-                              if (mounted) {
-                                setState(() {
-                                  _isRequestingPayment = false;
-                                });
-                              }
-                            }
-                          }
-                        },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: accentColor,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
+            ),
+            const SizedBox(height: 12),
+            // List of existing extra payments
+            if (extraPayments.isNotEmpty)
+              ...extraPayments.map((payment) {
+                final isPending = payment['status'] == 'pending';
+                return ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(
+                    'Amount: ${_parseAmount(payment['amount']).toStringAsFixed(2)}',
+                    style: GoogleFonts.poppins(
+                      fontWeight: FontWeight.w500,
                     ),
                   ),
-                  child: _isRequestingPayment
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
+                  subtitle: Text(
+                    'Reason: ${payment['reason'] ?? ''}\nStatus: ${payment['status']}',
+                    style: GoogleFonts.poppins(fontSize: 13),
+                  ),
+                  trailing: isPending
+                      ? Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                              icon: Icon(Icons.edit, color: Colors.blue),
+                              tooltip: 'Edit',
+                              onPressed: () async {
+                                final result =
+                                    await _showEditAdditionalPaymentDialog(
+                                        payment);
+                                if (result != null) {
+                                  setState(() {
+                                    _isRequestingPayment = true;
+                                  });
+                                  try {
+                                    final response = await _repairService
+                                        .updateAdditionalPayment(
+                                      orderId: widget.orderId,
+                                      paymentId: payment['payment_id'],
+                                      amount: double.parse(result['amount']),
+                                      reason: result['reason'],
+                                    );
+                                    if (response['success'] == true) {
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(
+                                        SnackBar(
+                                            content: Text(
+                                                'Additional payment updated',
+                                                style: GoogleFonts.poppins()),
+                                            backgroundColor: Colors.green),
+                                      );
+                                      _fetchOrderDetails();
+                                    } else {
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(
+                                        SnackBar(
+                                            content: Text(
+                                                response['message'] ??
+                                                    'Failed to update payment',
+                                                style: GoogleFonts.poppins()),
+                                            backgroundColor: Colors.red),
+                                      );
+                                    }
+                                  } catch (e) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                          content: Text('Error: $e',
+                                              style: GoogleFonts.poppins()),
+                                          backgroundColor: Colors.red),
+                                    );
+                                  } finally {
+                                    setState(() {
+                                      _isRequestingPayment = false;
+                                    });
+                                  }
+                                }
+                              },
+                            ),
+                            IconButton(
+                              icon: Icon(Icons.delete, color: Colors.red),
+                              tooltip: 'Delete',
+                              onPressed: () async {
+                                final shouldDelete =
+                                    await _showDeleteAdditionalPaymentDialog(
+                                        payment);
+                                if (shouldDelete == true) {
+                                  setState(() {
+                                    _isRequestingPayment = true;
+                                  });
+                                  try {
+                                    final response = await _repairService
+                                        .deleteAdditionalPayment(
+                                      orderId: widget.orderId,
+                                      paymentId: payment['payment_id'],
+                                    );
+                                    if (response['success'] == true) {
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(
+                                        SnackBar(
+                                            content: Text(
+                                                'Additional payment deleted',
+                                                style: GoogleFonts.poppins()),
+                                            backgroundColor: Colors.green),
+                                      );
+                                      _fetchOrderDetails();
+                                    } else {
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(
+                                        SnackBar(
+                                            content: Text(
+                                                response['message'] ??
+                                                    'Failed to delete payment',
+                                                style: GoogleFonts.poppins()),
+                                            backgroundColor: Colors.red),
+                                      );
+                                    }
+                                  } catch (e) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                          content: Text('Error: $e',
+                                              style: GoogleFonts.poppins()),
+                                          backgroundColor: Colors.red),
+                                    );
+                                  } finally {
+                                    setState(() {
+                                      _isRequestingPayment = false;
+                                    });
+                                  }
+                                }
+                              },
+                            ),
+                          ],
                         )
-                      : Text(
-                          'Submit Request',
-                          style: GoogleFonts.poppins(),
+                      : null,
+                );
+              }),
+            if (extraPayments.isNotEmpty) const Divider(),
+            // Form to add new additional payment
+            Form(
+              key: _additionalPaymentFormKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  TextFormField(
+                    controller: amountController,
+                    keyboardType:
+                        TextInputType.numberWithOptions(decimal: true),
+                    decoration: InputDecoration(
+                      labelText: 'Amount',
+                      labelStyle: GoogleFonts.poppins(
+                        color: textSecondaryColor,
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      prefixIcon: const Icon(Icons.attach_money),
+                    ),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Please enter an amount';
+                      }
+                      try {
+                        final amount = double.parse(value);
+                        if (amount <= 0) {
+                          return 'Amount must be greater than zero';
+                        }
+                      } catch (e) {
+                        return 'Please enter a valid number';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: reasonController,
+                    decoration: InputDecoration(
+                      labelText: 'Reason for additional payment',
+                      labelStyle: GoogleFonts.poppins(
+                        color: textSecondaryColor,
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      prefixIcon: const Icon(Icons.description),
+                    ),
+                    maxLines: 3,
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Please provide a reason';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: _isRequestingPayment
+                          ? null
+                          : () async {
+                              if (_additionalPaymentFormKey.currentState!
+                                  .validate()) {
+                                setState(() {
+                                  _isRequestingPayment = true;
+                                });
+                                try {
+                                  final response = await _repairService
+                                      .requestAdditionalPayment(
+                                    orderId: widget.orderId,
+                                    amount: double.parse(amountController.text),
+                                    reason: reasonController.text,
+                                  );
+                                  if (!mounted) return;
+                                  if (response['success'] == true) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text(
+                                            'Additional payment request sent',
+                                            style: GoogleFonts.poppins()),
+                                        backgroundColor: Colors.green,
+                                      ),
+                                    );
+                                    amountController.clear();
+                                    reasonController.clear();
+                                    _fetchOrderDetails();
+                                  } else {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text(
+                                            response['message'] ??
+                                                'Failed to request payment',
+                                            style: GoogleFonts.poppins()),
+                                        backgroundColor: Colors.red,
+                                      ),
+                                    );
+                                  }
+                                } catch (e) {
+                                  if (!mounted) return;
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text('Error: $e',
+                                          style: GoogleFonts.poppins()),
+                                      backgroundColor: Colors.red,
+                                    ),
+                                  );
+                                } finally {
+                                  if (mounted) {
+                                    setState(() {
+                                      _isRequestingPayment = false;
+                                    });
+                                  }
+                                }
+                              }
+                            },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: accentColor,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
                         ),
-                ),
+                      ),
+                      child: _isRequestingPayment
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : Text('Submit Request',
+                              style: GoogleFonts.poppins()),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Note: Additional payment requests will need to be paid by the customer before the order can be completed.',
+                    style: GoogleFonts.poppins(
+                      fontSize: 12,
+                      color: textSecondaryColor,
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 8),
-              Text(
-                'Note: Additional payment requests will need to be paid by the customer before the order can be completed.',
-                style: GoogleFonts.poppins(
-                  fontSize: 12,
-                  color: textSecondaryColor,
-                ),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
+    );
+  }
+
+  Future<Map<String, dynamic>?> _showEditAdditionalPaymentDialog(
+      Map<String, dynamic> payment) {
+    final TextEditingController editAmountController =
+        TextEditingController(text: payment['amount'].toString());
+    final TextEditingController editReasonController =
+        TextEditingController(text: payment['reason'] ?? '');
+    final _editFormKey = GlobalKey<FormState>();
+
+    return showDialog<Map<String, dynamic>>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text('Edit Additional Payment', style: GoogleFonts.poppins()),
+          content: Form(
+            key: _editFormKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextFormField(
+                  controller: editAmountController,
+                  keyboardType: TextInputType.numberWithOptions(decimal: true),
+                  decoration: InputDecoration(labelText: 'Amount'),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Please enter an amount';
+                    }
+                    try {
+                      final amount = double.parse(value);
+                      if (amount <= 0) {
+                        return 'Amount must be greater than zero';
+                      }
+                    } catch (e) {
+                      return 'Please enter a valid number';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: editReasonController,
+                  decoration: InputDecoration(labelText: 'Reason'),
+                  maxLines: 2,
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Please provide a reason';
+                    }
+                    return null;
+                  },
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, null),
+              child: Text('Cancel', style: GoogleFonts.poppins()),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                if (_editFormKey.currentState!.validate()) {
+                  Navigator.pop(context, {
+                    'amount': editAmountController.text,
+                    'reason': editReasonController.text,
+                  });
+                }
+              },
+              child: Text('Save', style: GoogleFonts.poppins()),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<bool?> _showDeleteAdditionalPaymentDialog(
+      Map<String, dynamic> payment) {
+    return showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title:
+              Text('Delete Additional Payment', style: GoogleFonts.poppins()),
+          content: Text(
+              'Are you sure you want to delete this additional payment?',
+              style: GoogleFonts.poppins()),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: Text('Cancel', style: GoogleFonts.poppins()),
+            ),
+            ElevatedButton(
+              onPressed: () =>
+                  Navigator.pop(context, true), // Return true to parent
+              child: Text('Delete', style: GoogleFonts.poppins()),
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -800,15 +1061,6 @@ class _ExpertOrderDetailsScreenState extends State<ExpertOrderDetailsScreen> {
         'color': Colors.green,
         'disabled': !isFullyPaid,
         'disabledMessage': 'Cannot mark as completed until fully paid'
-      });
-    }
-
-    if (currentStatus == 'completed') {
-      availableStatusOptions.add({
-        'value': 'delivered',
-        'label': 'Mark as Delivered',
-        'icon': Icons.local_shipping,
-        'color': Colors.teal,
       });
     }
 
@@ -1028,6 +1280,152 @@ class _ExpertOrderDetailsScreenState extends State<ExpertOrderDetailsScreen> {
           },
         ),
       ),
+    );
+  }
+
+  Widget _buildRefundSection() {
+    if (_isLoadingRefunds) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (_refunds.isEmpty) {
+      return Card(
+        elevation: 1,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Text(
+            'No refund requests yet.',
+            style: GoogleFonts.poppins(fontSize: 14, color: textSecondaryColor),
+          ),
+        ),
+      );
+    }
+    Color _getRefundStatusColor(String? status) {
+      switch (status) {
+        case 'approved':
+          return Colors.green;
+        case 'requested':
+          return Colors.orange;
+        case 'rejected':
+          return Colors.red;
+        default:
+          return Colors.grey;
+      }
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 20),
+        Text(
+          'Refunds',
+          style: GoogleFonts.poppins(
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+            color: textPrimaryColor,
+          ),
+        ),
+        const SizedBox(height: 12),
+        ListView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: _refunds.length,
+          itemBuilder: (context, idx) {
+            final refund = _refunds[idx];
+            final statusColor = _getRefundStatusColor(refund['status']);
+            return Card(
+              elevation: 2,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+                side: BorderSide(color: statusColor.withOpacity(0.3), width: 1),
+              ),
+              margin: const EdgeInsets.only(bottom: 12),
+              child: ListTile(
+                contentPadding: const EdgeInsets.all(16),
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: statusColor.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(
+                    refund['status'] == 'approved'
+                        ? Icons.check_circle_outline
+                        : refund['status'] == 'requested'
+                            ? Icons.pending_actions
+                            : Icons.cancel_outlined,
+                    color: statusColor,
+                  ),
+                ),
+                title: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Refund #${refund['refund_id']}',
+                      style: GoogleFonts.poppins(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        color: textPrimaryColor,
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: statusColor.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: statusColor.withOpacity(0.5)),
+                      ),
+                      child: Text(
+                        refund['status'].toString().toUpperCase(),
+                        style: GoogleFonts.poppins(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                          color: statusColor,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                subtitle: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 6),
+                    Text('Amount: ${refund['amount']}',
+                        style: GoogleFonts.poppins(fontSize: 14)),
+                    if (refund['reason'] != null &&
+                        refund['reason'].toString().isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Text('Reason: ${refund['reason']}',
+                            style: GoogleFonts.poppins(
+                                fontSize: 13, color: textSecondaryColor)),
+                      ),
+                    if (refund['decision_notes'] != null &&
+                        refund['decision_notes'].toString().isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Text('Admin Notes: ${refund['decision_notes']}',
+                            style: GoogleFonts.poppins(
+                                fontSize: 13, color: textSecondaryColor)),
+                      ),
+                    if (refund['decided_at'] != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Text(
+                            'Decided at: ${_formatDate(refund['decided_at'])}',
+                            style: GoogleFonts.poppins(
+                                fontSize: 12, color: textSecondaryColor)),
+                      ),
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
+      ],
     );
   }
 }

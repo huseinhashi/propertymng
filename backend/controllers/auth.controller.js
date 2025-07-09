@@ -95,6 +95,12 @@ export const loginExpert = async (req, res, next) => {
     if (!expert) {
       return res.status(404).json({ message: "Expert not found" });
     }
+    if (!expert.is_active) {
+      return res.status(403).json({
+        message:
+          "Your account is not active. Please contact support or wait for approval.",
+      });
+    }
 
     const isPasswordValid = await bcrypt.compare(
       password,
@@ -119,6 +125,7 @@ export const loginExpert = async (req, res, next) => {
           full_name: expert.full_name,
           email: expert.email,
           service_types: expert.service_types,
+          is_active: expert.is_active,
         },
       },
     });
@@ -183,6 +190,12 @@ export const loginCustomer = async (req, res, next) => {
     if (!customer) {
       return res.status(404).json({ message: "Customer not found" });
     }
+    if (!customer.is_active) {
+      return res.status(403).json({
+        message:
+          "Your account is not active. Please contact support or wait for approval.",
+      });
+    }
 
     const isPasswordValid = await bcrypt.compare(
       password,
@@ -206,6 +219,8 @@ export const loginCustomer = async (req, res, next) => {
           id: customer.customer_id,
           name: customer.name,
           phone: customer.phone,
+          is_active: customer.is_active,
+          address: customer.address,
         },
       },
     });

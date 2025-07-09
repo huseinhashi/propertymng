@@ -7,6 +7,9 @@ import RepairRequest from "../models/repair-request.model.js";
 import Customer from "../models/customer.model.js";
 import { Op } from "sequelize";
 import { initiateWaafiPayment } from "../services/payment.service.js";
+import Payout from "../models/payout.model.js";
+import ServiceType from "../models/service-type.model.js";
+import Notification from "../models/notification.model.js";
 
 // Get all service orders for the customer
 export const getCustomerServiceOrders = async (req, res, next) => {
@@ -239,6 +242,18 @@ export const processPayment = async (req, res, next) => {
         message: "You can only process payments for your own service orders",
       });
     }
+    //check if the service is already completed or refunded or delivred
+    if (
+      serviceOrder.status === "completed" ||
+      serviceOrder.status === "refunded" ||
+      serviceOrder.status === "delivered"
+    ) {
+      await transaction.rollback();
+      return res.status(400).json({
+        success: false,
+        message: "Service order already completed, refunded, or delivered",
+      });
+    }
 
     // Update all pending payments to paid
     await Payment.update(
@@ -290,6 +305,71 @@ export const processPayment = async (req, res, next) => {
       message: "Payment processed successfully",
       data: updatedServiceOrder,
     });
+  } catch (error) {
+    await transaction.rollback();
+    next(error);
+  }
+};
+
+// PATCH /customer/service-orders/:id/deliver
+export const markOrderAsDelivered = async (req, res, next) => {
+  const transaction = await sequelize.transaction();
+  try {
+    const { id } = req.params;
+    const customerId = req.user.customer_id;
+
+    if (!customerId) {
+      await transaction.rollback();
+      return res
+        .status(401)
+        .json({ success: false, message: "Authentication required" });
+    }
+
+    // Find the service order
+    const serviceOrder = await ServiceOrder.findOne({
+      where: { service_order_id: id },
+      include: [{ model: Bid, include: [{ model: RepairRequest }] }],
+      transaction,
+    });
+
+    if (!serviceOrder) {
+      await transaction.rollback();
+      return res
+        .status(404)
+        .json({ success: false, message: "Service order not found" });
+    }
+
+    // Only allow if status is completed and customer owns the order
+    if (
+      serviceOrder.status !== "completed" ||
+      serviceOrder.bid.repair_request.customer_id !== customerId
+    ) {
+      await transaction.rollback();
+      return res.status(400).json({
+        success: false,
+        message: "Order not eligible for delivery confirmation",
+      });
+    }
+
+    // Update status to delivered
+    await serviceOrder.update({ status: "delivered" }, { transaction });
+
+    // Update payout to released if exists
+    const payout = await Payout.findOne({
+      where: { service_order_id: id },
+      transaction,
+    });
+    if (payout && payout.payout_status !== "released") {
+      await payout.update(
+        { payout_status: "released", released_at: new Date() },
+        { transaction }
+      );
+    }
+
+    await transaction.commit();
+    res
+      .status(200)
+      .json({ success: true, message: "Order marked as delivered" });
   } catch (error) {
     await transaction.rollback();
     next(error);
@@ -378,6 +458,65 @@ export const updateServiceOrderStatus = async (req, res, next) => {
     // Set completed_at timestamp if status is changing to completed
     if (status === "completed" && serviceOrder.status !== "completed") {
       updates.completed_at = new Date();
+
+      // Calculate payout
+      const allPayments = await Payment.findAll({
+        where: { service_order_id: id, status: { [Op.in]: ["paid"] } },
+        transaction,
+      });
+      console.log("allPayments", allPayments);
+      const totalPayment = allPayments.reduce(
+        (sum, p) => sum + parseFloat(p.amount || 0),
+        0
+      );
+      console.log("totalPayment", totalPayment);
+
+      // Get commission percent from service type
+      const bid = await Bid.findByPk(serviceOrder.bid_id, {
+        include: [{ model: RepairRequest }],
+        transaction,
+      });
+      console.log("bid", bid);
+      const serviceTypeId = bid.repair_request.service_type_id;
+      const serviceType = await ServiceType.findByPk(serviceTypeId, {
+        transaction,
+      });
+      console.log("serviceType", serviceType);
+      const commissionPercent = parseFloat(serviceType.commission_percent || 0);
+      console.log("commissionPercent", commissionPercent);
+      const commission = (totalPayment * commissionPercent) / 100;
+      console.log("commission", commission);
+      const netPayout = totalPayment - commission;
+      const expertId = bid.expert_id;
+      console.log("netPayout", netPayout);
+      console.log("expertId", expertId);
+
+      // Create or update payout
+      const [payout, created] = await Payout.findOrCreate({
+        where: { service_order_id: id },
+        defaults: {
+          expert_id: expertId,
+          total_payment: totalPayment,
+          commission,
+          net_payout: netPayout,
+          payout_status: "pending",
+        },
+        transaction,
+      });
+      console.log("payout", payout);
+      console.log("created", created);
+      if (!created) {
+        await payout.update(
+          {
+            expert_id: expertId,
+            total_payment: totalPayment,
+            commission,
+            net_payout: netPayout,
+            payout_status: "pending",
+          },
+          { transaction }
+        );
+      }
     }
 
     await serviceOrder.update(updates, { transaction });
@@ -434,7 +573,18 @@ export const requestAdditionalPayment = async (req, res, next) => {
         message: "Service order not found",
       });
     }
-
+    //check if the service is already completed or refunded or delivred
+    if (
+      serviceOrder.status === "completed" ||
+      serviceOrder.status === "refunded" ||
+      serviceOrder.status === "delivered"
+    ) {
+      await transaction.rollback();
+      return res.status(400).json({
+        success: false,
+        message: "Service order already completed, refunded, or delivered",
+      });
+    }
     // Verify this service order belongs to the authenticated expert
     if (serviceOrder.bid.expert_id !== expertId) {
       await transaction.rollback();
@@ -469,7 +619,7 @@ export const requestAdditionalPayment = async (req, res, next) => {
       { transaction }
     );
 
-    // Update service order with the additional amount
+    // Update service order with the additional amount also update the payment status to partially paid
     const newExtraPrice =
       parseFloat(serviceOrder.extra_price || 0) + parseFloat(amount);
     const newTotalPrice = parseFloat(serviceOrder.base_price) + newExtraPrice;
@@ -478,6 +628,7 @@ export const requestAdditionalPayment = async (req, res, next) => {
       {
         extra_price: newExtraPrice,
         total_price: newTotalPrice,
+        payment_status: "partially_paid",
       },
       { transaction }
     );
@@ -562,6 +713,18 @@ export const processPaymentById = async (req, res, next) => {
       });
     }
 
+    //check if the service is already completed or refunded or delivred
+    if (
+      serviceOrder.status === "completed" ||
+      serviceOrder.status === "refunded" ||
+      serviceOrder.status === "delivered"
+    ) {
+      await transaction.rollback();
+      return res.status(400).json({
+        success: false,
+        message: "Service order already completed, refunded, or delivered",
+      });
+    }
     // Get customer phone number for payment
     const customerPhone = serviceOrder.bid.repair_request.customer.phone;
 
@@ -661,6 +824,290 @@ export const processPaymentById = async (req, res, next) => {
     });
   } catch (error) {
     await transaction.rollback();
+    next(error);
+  }
+};
+
+// Update an additional payment (for experts)
+export const updateAdditionalPayment = async (req, res, next) => {
+  const transaction = await sequelize.transaction();
+  try {
+    const { orderId, paymentId } = req.params;
+    const { amount, reason } = req.body;
+    const expertId = req.user.expert_id;
+
+    if (!expertId) {
+      await transaction.rollback();
+      return res.status(401).json({
+        success: false,
+        message: "Authentication required",
+      });
+    }
+
+    // Find the payment
+    const payment = await Payment.findOne({
+      where: {
+        payment_id: paymentId,
+        service_order_id: orderId,
+        type: "extra",
+        status: "pending",
+      },
+      transaction,
+    });
+
+    if (!payment) {
+      await transaction.rollback();
+      return res.status(404).json({
+        success: false,
+        message: "Pending additional payment not found",
+      });
+    }
+
+    // Find the service order and verify expert ownership
+    const serviceOrder = await ServiceOrder.findOne({
+      where: { service_order_id: orderId },
+      include: [{ model: Bid }],
+      transaction,
+    });
+    //check if the service is already completed or refunded or delivred
+    if (
+      serviceOrder.status === "completed" ||
+      serviceOrder.status === "refunded" ||
+      serviceOrder.status === "delivered"
+    ) {
+      await transaction.rollback();
+      return res.status(400).json({
+        success: false,
+        message: "Service order already completed, refunded, or delivered",
+      });
+    }
+
+    if (!serviceOrder || serviceOrder.bid.expert_id !== expertId) {
+      await transaction.rollback();
+      return res.status(403).json({
+        success: false,
+        message:
+          "You can only update additional payments for your own service orders",
+      });
+    }
+
+    // Validate input
+    if (!amount || isNaN(amount) || amount <= 0 || !reason) {
+      await transaction.rollback();
+      return res.status(400).json({
+        success: false,
+        message: "Valid amount and reason are required",
+      });
+    }
+
+    // Update payment
+    await payment.update({ amount, reason }, { transaction });
+
+    // Recalculate extra_price and total_price for the service order
+    const extraPayments = await Payment.findAll({
+      where: {
+        service_order_id: orderId,
+        type: "extra",
+        status: "pending",
+      },
+      transaction,
+    });
+    const paidExtraPayments = await Payment.findAll({
+      where: {
+        service_order_id: orderId,
+        type: "extra",
+        status: "paid",
+      },
+      transaction,
+    });
+    const totalExtra = [...extraPayments, ...paidExtraPayments].reduce(
+      (sum, p) => sum + parseFloat(p.amount || 0),
+      0
+    );
+    const newTotalPrice = parseFloat(serviceOrder.base_price) + totalExtra;
+    await serviceOrder.update(
+      {
+        extra_price: totalExtra,
+        total_price: newTotalPrice,
+      },
+      { transaction }
+    );
+
+    // Recalculate payment_status
+    const allPayments = await Payment.findAll({
+      where: { service_order_id: orderId },
+      transaction,
+    });
+    const totalPaid = allPayments
+      .filter((p) => p.status === "paid")
+      .reduce((sum, p) => sum + parseFloat(p.amount || 0), 0);
+    const hasPendingPayments = allPayments.some((p) => p.status === "pending");
+    let newPaymentStatus;
+    if (!hasPendingPayments && totalPaid >= newTotalPrice) {
+      newPaymentStatus = "fully_paid";
+    } else if (totalPaid > 0) {
+      newPaymentStatus = "partially_paid";
+    } else {
+      newPaymentStatus = "unpaid";
+    }
+    await serviceOrder.update(
+      { payment_status: newPaymentStatus },
+      { transaction }
+    );
+
+    await transaction.commit();
+    res.status(200).json({
+      success: true,
+      message: "Additional payment updated successfully",
+      data: await Payment.findByPk(paymentId),
+    });
+  } catch (error) {
+    await transaction.rollback();
+    next(error);
+  }
+};
+
+// Delete an additional payment (for experts)
+export const deleteAdditionalPayment = async (req, res, next) => {
+  const transaction = await sequelize.transaction();
+  try {
+    const { orderId, paymentId } = req.params;
+    const expertId = req.user.expert_id;
+
+    if (!expertId) {
+      await transaction.rollback();
+      return res.status(401).json({
+        success: false,
+        message: "Authentication required",
+      });
+    }
+
+    // Find the payment
+    const payment = await Payment.findOne({
+      where: {
+        payment_id: paymentId,
+        service_order_id: orderId,
+        type: "extra",
+        status: "pending",
+      },
+      transaction,
+    });
+
+    if (!payment) {
+      await transaction.rollback();
+      return res.status(404).json({
+        success: false,
+        message: "Pending additional payment not found",
+      });
+    }
+
+    // Find the service order and verify expert ownership
+    const serviceOrder = await ServiceOrder.findOne({
+      where: { service_order_id: orderId },
+      include: [{ model: Bid }],
+      transaction,
+    });
+
+    if (!serviceOrder || serviceOrder.bid.expert_id !== expertId) {
+      await transaction.rollback();
+      return res.status(403).json({
+        success: false,
+        message:
+          "You can only delete additional payments for your own service orders",
+      });
+    }
+    //check if the service is already completed or refunded or delivred
+    if (
+      serviceOrder.status === "completed" ||
+      serviceOrder.status === "refunded" ||
+      serviceOrder.status === "delivered"
+    ) {
+      await transaction.rollback();
+      return res.status(400).json({
+        success: false,
+        message: "Service order already completed, refunded, or delivered",
+      });
+    }
+
+    // Delete payment
+    await payment.destroy({ transaction });
+
+    // Recalculate extra_price and total_price for the service order
+    const extraPayments = await Payment.findAll({
+      where: {
+        service_order_id: orderId,
+        type: "extra",
+        status: "pending",
+      },
+      transaction,
+    });
+    const paidExtraPayments = await Payment.findAll({
+      where: {
+        service_order_id: orderId,
+        type: "extra",
+        status: "paid",
+      },
+      transaction,
+    });
+    const totalExtra = [...extraPayments, ...paidExtraPayments].reduce(
+      (sum, p) => sum + parseFloat(p.amount || 0),
+      0
+    );
+    const newTotalPrice = parseFloat(serviceOrder.base_price) + totalExtra;
+    await serviceOrder.update(
+      {
+        extra_price: totalExtra,
+        total_price: newTotalPrice,
+      },
+      { transaction }
+    );
+
+    // Recalculate payment_status
+    const allPayments = await Payment.findAll({
+      where: { service_order_id: orderId },
+      transaction,
+    });
+    const totalPaid = allPayments
+      .filter((p) => p.status === "paid")
+      .reduce((sum, p) => sum + parseFloat(p.amount || 0), 0);
+    const hasPendingPayments = allPayments.some((p) => p.status === "pending");
+    let newPaymentStatus;
+    if (!hasPendingPayments && totalPaid >= newTotalPrice) {
+      newPaymentStatus = "fully_paid";
+    } else if (totalPaid > 0) {
+      newPaymentStatus = "partially_paid";
+    } else {
+      newPaymentStatus = "unpaid";
+    }
+    await serviceOrder.update(
+      { payment_status: newPaymentStatus },
+      { transaction }
+    );
+
+    await transaction.commit();
+    res.status(200).json({
+      success: true,
+      message: "Additional payment deleted successfully",
+    });
+  } catch (error) {
+    await transaction.rollback();
+    next(error);
+  }
+};
+
+// Add a controller to mark a notification as read
+export const markNotificationAsRead = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const notification = await Notification.findByPk(id);
+    if (!notification) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Notification not found" });
+    }
+    await notification.update({ is_read: true });
+    res.json({ success: true, message: "Notification marked as read" });
+  } catch (error) {
     next(error);
   }
 };
