@@ -269,7 +269,7 @@ export const DashboardLayout = ({ children }) => {
             <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center">
               <span className="text-primary-foreground font-bold text-lg">A</span>
             </div>
-            <h1 className="text-xl font-bold text-foreground">birro</h1>
+            <h1 className="text-xl font-bold text-foreground">Property Repairs</h1>
           </div>
           <button
             onClick={() => setIsSidebarOpen(false)}
