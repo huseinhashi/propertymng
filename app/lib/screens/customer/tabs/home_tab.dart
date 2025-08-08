@@ -101,14 +101,30 @@ class HomeTab extends StatelessWidget {
             mainAxisSpacing: 16,
             childAspectRatio: 1.1,
             children: [
-              _buildServiceCard("Mobile", "Mobile repair & maintenance",
-                  Icons.phone_android_rounded, Colors.teal),
-              _buildServiceCard("Furniture", "Furniture repair & maintenance",
-                  Icons.format_paint_rounded, Colors.purple),
-              _buildServiceCard("Plumbing", "Quick fixes & installations",
-                  Icons.water_drop_rounded, Colors.blue),
-              _buildServiceCard("Electrical", "Wiring & electrical repairs",
-                  Icons.electrical_services_rounded, Colors.amber),
+              _buildServiceCard(
+                  context,
+                  "Mobile",
+                  "Mobile repair & maintenance",
+                  Icons.phone_android_rounded,
+                  Colors.teal),
+              _buildServiceCard(
+                  context,
+                  "Furniture",
+                  "Furniture repair & maintenance",
+                  Icons.format_paint_rounded,
+                  Colors.purple),
+              _buildServiceCard(
+                  context,
+                  "Plumbing",
+                  "Quick fixes & installations",
+                  Icons.water_drop_rounded,
+                  Colors.blue),
+              _buildServiceCard(
+                  context,
+                  "Electrical",
+                  "Wiring & electrical repairs",
+                  Icons.electrical_services_rounded,
+                  Colors.amber),
             ],
           ),
         ],
@@ -116,54 +132,65 @@ class HomeTab extends StatelessWidget {
     );
   }
 
-  Widget _buildServiceCard(
-      String title, String subtitle, IconData icon, Color color) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 5),
+  Widget _buildServiceCard(BuildContext context, String title, String subtitle,
+      IconData icon, Color color) {
+    return GestureDetector(
+      onTap: () {
+        // Navigate to request creation screen
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const RepairRequestScreen(),
           ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
+        );
+      },
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 5),
             ),
-            child: Icon(
-              icon,
-              color: color,
-              size: 24,
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(
+                icon,
+                color: color,
+                size: 24,
+              ),
             ),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            title,
-            style: GoogleFonts.poppins(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: const Color(0xFF1F2937), // Gray-800
+            const SizedBox(height: 12),
+            Text(
+              title,
+              style: GoogleFonts.poppins(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: const Color(0xFF1F2937), // Gray-800
+              ),
             ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            subtitle,
-            style: GoogleFonts.poppins(
-              fontSize: 12,
-              color: const Color(0xFF6B7280), // Gray-500
+            const SizedBox(height: 4),
+            Text(
+              subtitle,
+              style: GoogleFonts.poppins(
+                fontSize: 12,
+                color: const Color(0xFF6B7280), // Gray-500
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

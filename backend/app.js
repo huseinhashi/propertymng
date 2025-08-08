@@ -9,6 +9,7 @@ import serviceTypeRoutes from "./routes/service-type.routes.js";
 import adminRouter from "./routes/admin.routes.js";
 import customerRouter from "./routes/customer.routes.js";
 import expertRouter from "./routes/expert.routes.js";
+import reportsRouter from "./routes/reports.routes.js";
 import { fileURLToPath } from "url";
 import path from "path";
 
@@ -48,6 +49,7 @@ app.use("/api/v1/service-types", serviceTypeRoutes);
 app.use("/api/v1/admin", adminRouter);
 app.use("/api/v1/customer", customerRouter);
 app.use("/api/v1/expert", expertRouter);
+app.use("/api/v1/reports", reportsRouter);
 
 app.use(errorMiddleware);
 

@@ -22,6 +22,7 @@ import { ServiceOrderDetailsPage } from "@/pages/admin/ServiceOrderDetailsPage";
 import { PaymentLogsPage } from "@/pages/admin/PaymentLogsPage";
 import { RefundsPage } from "@/pages/admin/RefundsPage";
 import { PayoutLogsPage } from "./pages/admin/PayoutLogsPage";
+import { ReportsPage } from "@/pages/admin/ReportsPage";
 
 function App() {
   return (
@@ -64,6 +65,7 @@ function App() {
                       <Route path="payments" element={<PaymentLogsPage />} />
                       <Route path="refunds" element={<RefundsPage />} />
                       <Route path="payouts" element={<PayoutLogsPage />} />
+                      <Route path="reports" element={<ReportsPage />} />
                     </Routes>
                   </DashboardLayout>
                 </ProtectedRoute>

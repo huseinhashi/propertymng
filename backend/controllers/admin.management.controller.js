@@ -1,4 +1,5 @@
 import Admin from "../models/admin.model.js";
+import bcrypt from "bcryptjs";
 
 // Get all admins
 export const getAllAdmins = async (req, res, next) => {
@@ -26,10 +27,12 @@ export const createAdmin = async (req, res, next) => {
       });
     }
 
+    const hashedPassword = await bcrypt.hash(password, 10);
+
     const admin = await Admin.create({
       name,
       email,
-      password, // Hashing should be implemented
+      password: hashedPassword,
     });
 
     res.status(201).json({
@@ -69,7 +72,8 @@ export const updateAdmin = async (req, res, next) => {
     admin.name = name || admin.name;
     admin.email = email || admin.email;
     if (password) {
-      admin.password = password; // Hashing should be implemented
+      const hashedPassword = await bcrypt.hash(password, 10);
+      admin.password = hashedPassword;
     }
 
     await admin.save();
