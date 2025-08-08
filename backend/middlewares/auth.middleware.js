@@ -3,7 +3,7 @@ import { JWT_SECRET } from "../config/env.js";
 import Customer from "../models/customer.model.js";
 import Expert from "../models/expert.model.js";
 import Admin from "../models/admin.model.js";
-import AppError from "../utils/appError.js";
+import AppError from "../utils/AppError.js";
 import { catchAsync } from "../utils/catchAsync.js";
 
 // Middleware to authenticate users

@@ -12,7 +12,7 @@ class ApiClient {
   late final Dio _dio;
 
   // Adjust this base URL to your actual backend server URL
-  static const String baseUrl = 'http://localhost:5000/api/v1';
+  static const String baseUrl = 'https://property.up.railway.app/api/v1';
 
   // Singleton pattern
   factory ApiClient() => _instance;
@@ -26,19 +26,20 @@ class ApiClient {
   }
 
   ApiClient._internal() {
-    _dio = Dio(BaseOptions(
-      baseUrl: baseUrl,
-      validateStatus: (status) => true, // Handle all status codes ourselves
-      connectTimeout: const Duration(seconds: 30), // Increase timeout
-      receiveTimeout: const Duration(seconds: 30), // Increase timeout
-    ));
+    _dio = Dio(
+      BaseOptions(
+        baseUrl: baseUrl,
+        validateStatus: (status) => true, // Handle all status codes ourselves
+        connectTimeout: const Duration(seconds: 30), // Increase timeout
+        receiveTimeout: const Duration(seconds: 30), // Increase timeout
+      ),
+    );
 
     // Add logging interceptor in debug mode
     if (kDebugMode) {
-      _dio.interceptors.add(LogInterceptor(
-        requestBody: true,
-        responseBody: true,
-      ));
+      _dio.interceptors.add(
+        LogInterceptor(requestBody: true, responseBody: true),
+      );
     }
 
     // Add auth interceptor
@@ -122,16 +123,25 @@ class ApiClient {
           response = await _dio.get(path, queryParameters: queryParameters);
           break;
         case 'POST':
-          response = await _dio.post(path,
-              data: data, queryParameters: queryParameters);
+          response = await _dio.post(
+            path,
+            data: data,
+            queryParameters: queryParameters,
+          );
           break;
         case 'PATCH':
-          response = await _dio.patch(path,
-              data: data, queryParameters: queryParameters);
+          response = await _dio.patch(
+            path,
+            data: data,
+            queryParameters: queryParameters,
+          );
           break;
         case 'DELETE':
-          response = await _dio.delete(path,
-              data: data, queryParameters: queryParameters);
+          response = await _dio.delete(
+            path,
+            data: data,
+            queryParameters: queryParameters,
+          );
           break;
         default:
           throw Exception('Unsupported method: $method');
@@ -164,11 +174,7 @@ class ApiClient {
       };
     }
 
-    return {
-      'success': true,
-      'data': response.data,
-      'message': 'Success',
-    };
+    return {'success': true, 'data': response.data, 'message': 'Success'};
   }
 
   // Process error response
@@ -187,7 +193,8 @@ class ApiClient {
       errorMessage = 'Server returned unexpected response. Please try again.';
     } else if (response.data is Map) {
       // Extract error message from response data
-      errorMessage = response.data['message'] ??
+      errorMessage =
+          response.data['message'] ??
           response.data['error'] ??
           'Error ${response.statusCode}';
     } else if (response.data is String) {
@@ -198,10 +205,7 @@ class ApiClient {
       errorMessage = 'Server returned error code: ${response.statusCode}';
     }
 
-    return {
-      'success': false,
-      'message': errorMessage,
-    };
+    return {'success': false, 'message': errorMessage};
   }
 
   // Process Dio exceptions
@@ -216,7 +220,8 @@ class ApiClient {
     if (error.response != null) {
       // Try to extract error message from response
       if (error.response!.data is Map) {
-        errorMessage = error.response!.data['message'] ??
+        errorMessage =
+            error.response!.data['message'] ??
             error.response!.data['error'] ??
             _getErrorMessage(error);
       } else if (error.response!.data is String) {
@@ -228,10 +233,7 @@ class ApiClient {
       errorMessage = _getErrorMessage(error);
     }
 
-    return {
-      'success': false,
-      'message': errorMessage,
-    };
+    return {'success': false, 'message': errorMessage};
   }
 
   // Get error message based on DioException type
@@ -274,7 +276,7 @@ class ApiClient {
     }
   }
 
-// Update the requestMultipart method in ApiClient class
+  // Update the requestMultipart method in ApiClient class
   Future<Map<String, dynamic>> requestMultipart({
     required String method,
     required String path,
@@ -302,8 +304,9 @@ class ApiClient {
         final prefs = await SharedPreferences.getInstance();
         final prefToken = prefs.getString('token');
         if (prefToken != null) {
-          final tokenWithBearer =
-              prefToken.startsWith('Bearer ') ? prefToken : 'Bearer $prefToken';
+          final tokenWithBearer = prefToken.startsWith('Bearer ')
+              ? prefToken
+              : 'Bearer $prefToken';
           request.headers['Authorization'] = tokenWithBearer;
           if (kDebugMode) {
             print('🔐 Using token from preferences for multipart request');
@@ -320,7 +323,8 @@ class ApiClient {
       if (kDebugMode) {
         print('🌐 Making multipart request to: $url');
         print(
-            '🔑 Token: ${request.headers.containsKey('Authorization') ? 'Present' : 'None'}');
+          '🔑 Token: ${request.headers.containsKey('Authorization') ? 'Present' : 'None'}',
+        );
         if (data != null) print('📦 Data: $data');
         if (files != null) print('📎 Files: ${files.length}');
       }
@@ -341,7 +345,8 @@ class ApiClient {
 
           try {
             // Get the MIME type of the file
-            final mimeType = lookupMimeType(filePath) ??
+            final mimeType =
+                lookupMimeType(filePath) ??
                 'image/jpeg'; // Default to jpeg if can't detect
 
             request.files.add(
@@ -349,8 +354,9 @@ class ApiClient {
                 fieldName,
                 filePath,
                 filename: filename,
-                contentType:
-                    MediaType.parse(mimeType), // Set the proper content type
+                contentType: MediaType.parse(
+                  mimeType,
+                ), // Set the proper content type
               ),
             );
             if (kDebugMode) {
@@ -378,7 +384,8 @@ class ApiClient {
       if (kDebugMode) {
         print('📨 Response status: ${response.statusCode}');
         print(
-            '📨 Response body: ${response.body.length > 1000 ? response.body.substring(0, 1000) + '...' : response.body}');
+          '📨 Response body: ${response.body.length > 1000 ? response.body.substring(0, 1000) + '...' : response.body}',
+        );
       }
 
       // Parse response
@@ -405,10 +412,7 @@ class ApiClient {
       if (kDebugMode) {
         print('❌ Request error: $e');
       }
-      return {
-        'success': false,
-        'message': 'Request failed: $e',
-      };
+      return {'success': false, 'message': 'Request failed: $e'};
     }
   }
 }

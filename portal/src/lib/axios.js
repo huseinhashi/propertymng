@@ -1,9 +1,10 @@
 //portal/src/lib/axios.js
 import axios from "axios";
 
+const serverURL = "https://property.up.railway.app";
+
 const api = axios.create({
-  serverURL: "http://localhost:5000",
-  baseURL: "http://localhost:5000/api/v1",
+  baseURL: `${serverURL}/api/v1`,
   headers: {
     "Content-Type": "application/json",
   },
